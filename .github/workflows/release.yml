@@ -1,0 +1,112 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to build"
+        required: true
+
+permissions:
+  contents: write
+
+env:
+  TAG: ${{ github.event.inputs.tag || github.ref_name }}
+
+jobs:
+  draft:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Create or reuse the draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if ! gh release view "$TAG" >/dev/null 2>&1; then
+            gh release create "$TAG" --draft --title "DriveFerry $TAG" --generate-notes
+          fi
+
+  build:
+    needs: draft
+    name: ${{ matrix.label }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: windows-latest, label: Windows x64, asset: DriveFerry-windows-x64.exe }
+          - { os: macos-latest, label: macOS Apple Silicon, asset: DriveFerry-macos-arm64.zip }
+          - { os: macos-13, label: macOS Intel, asset: DriveFerry-macos-x64.zip }
+          - { os: ubuntu-22.04, label: Linux x64, asset: DriveFerry-linux-x64 }
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # pywebview draws through the system webview: WebKitGTK on Linux, and
+      # PyInstaller needs those bindings present at build time.
+      - name: System webview (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgirepository1.0-dev libcairo2-dev gir1.2-webkit2-4.0 \
+                                  python3-gi python3-gi-cairo
+
+      - run: pip install pyinstaller pywebview
+
+      - name: Build (Windows)
+        if: runner.os == 'Windows'
+        run: >
+          pyinstaller --noconfirm --onefile --windowed --clean
+          --name DriveFerry
+          --add-data "driveferry/web;driveferry/web"
+          run.py
+
+      - name: Build (Linux)
+        if: runner.os == 'Linux'
+        run: >
+          pyinstaller --noconfirm --onefile --clean
+          --name DriveFerry
+          --add-data "driveferry/web:driveferry/web"
+          run.py
+
+      - name: Build (macOS)
+        if: runner.os == 'macOS'
+        run: >
+          pyinstaller --noconfirm --windowed --clean
+          --name DriveFerry
+          --add-data "driveferry/web:driveferry/web"
+          run.py
+
+      - name: Package the asset
+        shell: bash
+        run: |
+          mkdir -p out
+          case "${{ runner.os }}" in
+            Windows) cp dist/DriveFerry.exe "out/${{ matrix.asset }}" ;;
+            Linux)   cp dist/DriveFerry "out/${{ matrix.asset }}" ;;
+            macOS)   (cd dist && zip -qry "../out/${{ matrix.asset }}" DriveFerry.app) ;;
+          esac
+          ls -l out
+
+      - name: Upload to the release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "$TAG" "out/${{ matrix.asset }}" --clobber
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release edit "$TAG" --draft=false --latest

@@ -1,0 +1,78 @@
+name: Bug report
+description: Something behaves differently from what the docs say
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. If this is a security problem, please use the
+        Security tab instead of this form.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you did, what you expected, what you got instead.
+      placeholder: |
+        1. Selected a folder on account A
+        2. Pressed Copy
+        3. ...
+    validations:
+      required: true
+
+  - type: input
+    id: driveferry-version
+    attributes:
+      label: DriveFerry version
+      description: Shown in Settings, or the release you downloaded.
+      placeholder: "0.1.0"
+    validations:
+      required: true
+
+  - type: input
+    id: rclone-version
+    attributes:
+      label: rclone version
+      description: Output of `rclone version`, first line.
+      placeholder: "v1.75.1"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - Windows 11
+        - Windows 10
+        - macOS
+        - Linux
+    validations:
+      required: true
+
+  - type: dropdown
+    id: backends
+    attributes:
+      label: Which backends were involved
+      options:
+        - Google Drive to Google Drive
+        - Google Drive to something else
+        - Neither side is Google Drive
+        - Not sure
+    validations:
+      required: true
+
+  - type: textarea
+    id: error
+    attributes:
+      label: Error message
+      description: Paste it exactly, including anything the status bar showed.
+      render: text
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I removed account names or paths I did not want to share.
+          required: true

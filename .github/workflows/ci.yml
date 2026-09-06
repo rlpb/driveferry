@@ -1,0 +1,74 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install ruff
+      - run: ruff check .
+      - run: ruff format --check .
+
+  test:
+    name: ${{ matrix.os }} / Python ${{ matrix.python }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-latest, python: "3.9" }
+          - { os: ubuntu-latest, python: "3.13" }
+          - { os: windows-latest, python: "3.13" }
+          - { os: macos-latest, python: "3.13" }
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+
+      # The end-to-end tests drive a real rclone process; without it they skip,
+      # and the suite would pass while testing none of the transfer path.
+      - name: Install rclone (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y rclone
+      - name: Install rclone (macOS)
+        if: runner.os == 'macOS'
+        run: brew install rclone
+      - name: Install rclone (Windows)
+        if: runner.os == 'Windows'
+        run: choco install rclone --no-progress -y
+
+      - run: rclone version
+
+      - run: pip install pytest
+
+      - name: Run the test suite
+        run: python -m pytest -q
+
+      - name: Fail if the end-to-end tests were skipped
+        shell: bash
+        run: |
+          python -m pytest tests/test_end_to_end.py -q --collect-only > /dev/null
+          output=$(python -m pytest tests/test_end_to_end.py -q -rs)
+          echo "$output"
+          if echo "$output" | grep -q "rclone is not installed"; then
+            echo "::error::rclone was missing, so the real-transfer tests did not run."
+            exit 1
+          fi

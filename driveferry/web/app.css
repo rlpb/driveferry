@@ -330,9 +330,13 @@ body.is-web .tb-controls, body.is-web .tb-lights { display: none; }
   min-height: 0;
 }
 
+/* Flex, not grid rows: the storage meter is hidden on any backend that cannot
+   report a quota, and with positional grid rows every child below it shifted
+   up one, which handed the 1fr row to the footer and collapsed the file list
+   to a few pixels. */
 .pane {
-  display: grid;
-  grid-template-rows: auto auto auto minmax(0, 1fr) auto;
+  display: flex;
+  flex-direction: column;
   min-height: 0;
   background: var(--surface);
   border-radius: var(--radius-l);
@@ -346,6 +350,7 @@ body.is-web .tb-controls, body.is-web .tb-lights { display: none; }
   display: flex;
   align-items: center;
   gap: 8px;
+  flex: none;
   padding: 10px 12px;
   border-bottom: 0.5px solid var(--separator);
 }
@@ -408,6 +413,7 @@ body.is-web .tb-controls, body.is-web .tb-lights { display: none; }
   display: flex;
   align-items: center;
   gap: 1px;
+  flex: none;
   padding: 6px 12px;
   overflow-x: auto;
   scrollbar-width: none;
@@ -434,7 +440,7 @@ body.is-web .tb-controls, body.is-web .tb-lights { display: none; }
    Storage
    ============================================================ */
 
-.storage { padding: 9px 12px 10px; border-bottom: 0.5px solid var(--separator); }
+.storage { flex: none; padding: 9px 12px 10px; border-bottom: 0.5px solid var(--separator); }
 .storage-bar { display: block; width: 100%; height: 4px; }
 .storage-track { fill: var(--fill-2); stroke: none; }
 .storage-fill { fill: var(--blue); stroke: none; transition: width var(--dur) var(--ease-out); }
@@ -446,7 +452,7 @@ body.is-web .tb-controls, body.is-web .tb-lights { display: none; }
    File list
    ============================================================ */
 
-.list-wrap { position: relative; min-height: 0; overflow: hidden; }
+.list-wrap { position: relative; flex: 1 1 auto; min-height: 0; overflow: hidden; }
 
 .filelist {
   margin: 0;
@@ -546,6 +552,7 @@ body.is-web .tb-controls, body.is-web .tb-lights { display: none; }
 @keyframes shimmer { to { background-position: -200% 0; } }
 
 .pane-foot {
+  flex: none;
   padding: 8px 12px;
   border-top: 0.5px solid var(--separator);
   color: var(--label-2);

@@ -21,39 +21,43 @@ WINDOW_SIZE = (1220, 780)
 MIN_WINDOW_SIZE = (940, 620)
 
 
+#: The live window, kept out of the bridge object on purpose. pywebview walks
+#: the attributes of whatever is passed as `js_api`, and a Window holds a
+#: native handle whose property chain is effectively infinite: storing it on
+#: the bridge makes pywebview recurse until it raises, which silently breaks
+#: the whole JavaScript bridge and with it the painted window buttons.
+_WINDOW = None
+_MAXIMISED = False
+
+
 class WindowBridge:
     """The painted window buttons, wired to the real window.
 
     pywebview exposes this object to the page as ``window.pywebview.api``.
-    Every method acts on DriveFerry's own window and nothing else.
+    Every method acts on DriveFerry's own window and nothing else. Keep it
+    free of instance attributes.
     """
 
-    def __init__(self):
-        self.window = None
-        self._maximised = False
-
     def minimize(self):
-        if self.window:
-            self.window.minimize()
+        if _WINDOW:
+            _WINDOW.minimize()
         return True
 
     def toggle_maximize(self):
-        if not self.window:
+        global _MAXIMISED
+        if not _WINDOW:
             return False
-        if self._maximised:
-            self.window.restore()
+        if _MAXIMISED:
+            _WINDOW.restore()
         else:
-            self.window.maximize()
-        self._maximised = not self._maximised
-        return self._maximised
+            _WINDOW.maximize()
+        _MAXIMISED = not _MAXIMISED
+        return _MAXIMISED
 
     def close(self):
-        if self.window:
-            self.window.destroy()
+        if _WINDOW:
+            _WINDOW.destroy()
         return True
-
-    def platform(self):
-        return sys.platform
 
 
 def build_parser():
@@ -85,8 +89,8 @@ def open_window(url, use_browser=False, framed=False):
                 file=sys.stderr,
             )
         else:
-            bridge = WindowBridge()
-            bridge.window = webview.create_window(
+            global _WINDOW
+            _WINDOW = webview.create_window(
                 WINDOW_TITLE,
                 url,
                 width=WINDOW_SIZE[0],
@@ -95,7 +99,7 @@ def open_window(url, use_browser=False, framed=False):
                 frameless=not framed,
                 easy_drag=False,  # the page marks its own drag region
                 background_color="#F2F2F7",
-                js_api=bridge,
+                js_api=WindowBridge(),
             )
             webview.start()
             return "webview"

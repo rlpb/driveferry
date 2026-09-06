@@ -4,7 +4,7 @@
 
 # DriveFerry
 
-**Sposta cartelle da un account Google Drive a un altro, vedendo cosa succede.**
+**Sposta file e cartelle da un account Google Drive a un altro, vedendo cosa succede.**
 Un'app desktop nativa costruita su rclone, per l'unica cosa che Google Drive ancora non fa.
 
 [![CI](https://github.com/rlpb/driveferry/actions/workflows/ci.yml/badge.svg)](https://github.com/rlpb/driveferry/actions/workflows/ci.yml)

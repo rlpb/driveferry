@@ -65,6 +65,7 @@ jobs:
         run: >
           pyinstaller --noconfirm --onefile --windowed --clean
           --name DriveFerry
+          --icon docs/icon.ico
           --add-data "driveferry/web;driveferry/web"
           run.py
 
@@ -81,6 +82,7 @@ jobs:
         run: >
           pyinstaller --noconfirm --windowed --clean
           --name DriveFerry
+          --icon docs/icon.icns
           --add-data "driveferry/web:driveferry/web"
           run.py
 

@@ -4,7 +4,7 @@
 
 # DriveFerry
 
-**Move folders between Google Drive accounts, visually.**
+**Move files and folders between Google Drive accounts, visually.**
 A native desktop app on top of rclone, for the one thing Google Drive still cannot do.
 
 [![CI](https://github.com/rlpb/driveferry/actions/workflows/ci.yml/badge.svg)](https://github.com/rlpb/driveferry/actions/workflows/ci.yml)

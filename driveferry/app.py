@@ -85,7 +85,7 @@ def storage_path():
 def build_parser():
     parser = argparse.ArgumentParser(
         prog="driveferry",
-        description="Move folders between Google Drive accounts, visually.",
+        description="Move files and folders between Google Drive accounts, visually.",
     )
     parser.add_argument(
         "--browser", action="store_true", help="open in the default browser instead of the app window"

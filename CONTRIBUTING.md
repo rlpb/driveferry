@@ -64,6 +64,17 @@ declined.
 language. Adding a locale means copying the `en` block, translating it and
 adding a plural table entry; the language picker finds it automatically.
 
+## Artwork
+
+`docs/icon.svg` and `docs/hero.svg` are the sources. Everything else in `docs/`
+is exported from them: `icon-1024.png`, `icon.ico` (Windows builds),
+`icon.icns` (macOS builds) and `social-preview.png` (the repository's social
+card). Edit the SVG, then re-export, and keep the ferry in the wordmark
+identical to the one in the icon.
+
+The two screenshots are captures of the running app, one per appearance. Please
+retake both rather than editing them.
+
 ## Style
 
 Python is formatted and linted with `ruff`:

@@ -72,8 +72,8 @@ Grab the build for your system from the
 | --- | --- | --- |
 | Windows 10/11 | `DriveFerry-windows-x64.exe` | Uses the WebView2 runtime, already present on Windows 11 |
 | macOS, Apple Silicon | `DriveFerry-macos-arm64.zip` | Unsigned: first launch is right-click then **Open** |
-| macOS, Intel | `DriveFerry-macos-x64.zip` | Same first-launch step |
 | Linux x64 | `DriveFerry-linux-x64` | Needs `gir1.2-webkit2-4.0` and `python3-gi` installed |
+| Intel Mac | run from source | GitHub retired its Intel build runners; the source install below works |
 
 DriveFerry needs rclone on the machine. If it is missing, the app says so and
 gives you the command:

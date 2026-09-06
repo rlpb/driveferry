@@ -40,10 +40,11 @@ jobs:
         include:
           - { os: windows-latest, label: Windows x64, asset: DriveFerry-windows-x64.exe }
           - { os: macos-latest, label: macOS Apple Silicon, asset: DriveFerry-macos-arm64.zip }
-          - { os: macos-13, label: macOS Intel, asset: DriveFerry-macos-x64.zip }
           - { os: ubuntu-22.04, label: Linux x64, asset: DriveFerry-linux-x64 }
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.TAG }}
 
       - uses: actions/setup-python@v7
         with:

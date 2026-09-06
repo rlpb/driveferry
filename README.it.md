@@ -72,8 +72,8 @@ Prendi il file per il tuo sistema dalla
 | --- | --- | --- |
 | Windows 10/11 | `DriveFerry-windows-x64.exe` | Usa il runtime WebView2, già presente su Windows 11 |
 | macOS, Apple Silicon | `DriveFerry-macos-arm64.zip` | Non firmata: al primo avvio tasto destro e **Apri** |
-| macOS, Intel | `DriveFerry-macos-x64.zip` | Stesso primo avvio |
 | Linux x64 | `DriveFerry-linux-x64` | Richiede `gir1.2-webkit2-4.0` e `python3-gi` |
+| Mac Intel | dal sorgente | GitHub ha dismesso i runner Intel; l'installazione dal sorgente qui sotto funziona |
 
 Serve rclone sulla macchina. Se manca, l'app te lo dice e ti dà il comando:
 

@@ -5,7 +5,7 @@ Thanks for taking a look. Issues, ideas and pull requests are all welcome.
 ## Getting set up
 
 ```bash
-git clone https://github.com/OWNER/driveferry
+git clone https://github.com/rlpb/driveferry
 cd driveferry
 python -m venv .venv
 # Windows:  .venv\Scripts\activate

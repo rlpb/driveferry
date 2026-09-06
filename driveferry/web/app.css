@@ -832,7 +832,15 @@ body.is-web .tb-controls, body.is-web .tb-lights { display: none; }
 }
 .setting-row + .setting-row { border-top: 0.5px solid var(--separator); }
 .setting-label { font-weight: 500; }
-.setting-value { color: var(--label-2); font-size: 12px; text-align: right; overflow-wrap: anywhere; user-select: text; }
+.setting-value {
+  color: var(--label-2);
+  font-size: 11px;
+  line-height: 1.5;
+  text-align: right;
+  max-width: 62%;
+  overflow-wrap: anywhere;
+  user-select: text;
+}
 
 .seg-mini { display: flex; gap: 2px; padding: 2px; background: var(--fill-2); border-radius: var(--radius-s); flex: none; }
 .seg-mini button {

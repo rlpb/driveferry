@@ -208,6 +208,51 @@ def test_about_reports_unsupported_instead_of_failing():
     assert api.op_about({"remote": "alpha"})["supported"] is False
 
 
+def test_prefs_default_to_following_the_system():
+    api, _ = make_api()
+    assert api.prefs == {"theme": "system", "locale": "system"}
+
+
+def test_prefs_are_written_and_read_back_by_a_fresh_api(tmp_path):
+    from driveferry.server import Api
+
+    path = tmp_path / "settings.json"
+    first = Api(FakeDaemon(), prefs_path=path)
+    first.op_prefs_set({"theme": "dark", "locale": "it"})
+
+    second = Api(FakeDaemon(), prefs_path=path)
+    assert second.prefs == {"theme": "dark", "locale": "it"}
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [{"theme": "neon"}, {"locale": "xx"}, {"theme": ""}, {"locale": None}, {"theme": 1}],
+)
+def test_prefs_reject_values_outside_the_whitelist(payload, tmp_path):
+    from driveferry.server import Api
+
+    api = Api(FakeDaemon(), prefs_path=tmp_path / "settings.json")
+    with pytest.raises(ApiError):
+        api.op_prefs_set(payload)
+    assert not (tmp_path / "settings.json").exists()
+
+
+def test_prefs_ignore_unknown_keys(tmp_path):
+    from driveferry.server import Api
+
+    api = Api(FakeDaemon(), prefs_path=tmp_path / "settings.json")
+    api.op_prefs_set({"theme": "light", "rclone_binary": "/tmp/evil"})
+    assert api.prefs == {"theme": "light", "locale": "system"}
+
+
+def test_a_corrupt_settings_file_falls_back_to_defaults(tmp_path):
+    from driveferry.server import Api
+
+    path = tmp_path / "settings.json"
+    path.write_text("{not json", encoding="utf-8")
+    assert Api(FakeDaemon(), prefs_path=path).prefs == {"theme": "system", "locale": "system"}
+
+
 def test_transfer_status_rejects_a_foreign_group():
     api, _ = make_api()
     with pytest.raises(ApiError):

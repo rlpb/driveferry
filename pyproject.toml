@@ -39,10 +39,10 @@ dev = ["pytest>=7.4", "ruff>=0.6"]
 driveferry = "driveferry.app:main"
 
 [project.urls]
-Homepage = "https://github.com/OWNER/driveferry"
-Source = "https://github.com/OWNER/driveferry"
-Issues = "https://github.com/OWNER/driveferry/issues"
-Changelog = "https://github.com/OWNER/driveferry/blob/main/CHANGELOG.md"
+Homepage = "https://github.com/rlpb/driveferry"
+Source = "https://github.com/rlpb/driveferry"
+Issues = "https://github.com/rlpb/driveferry/issues"
+Changelog = "https://github.com/rlpb/driveferry/blob/main/CHANGELOG.md"
 
 [tool.hatch.build.targets.wheel]
 packages = ["driveferry"]

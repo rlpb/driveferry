@@ -77,12 +77,55 @@ def _join(path, name):
     return posixpath.join(path, name) if path else name
 
 
+#: Interface preferences, with the only values each one accepts. The page never
+#: keeps them in browser storage: the local server listens on a fresh port every
+#: run, and browser storage is per origin, so a new port means an empty store
+#: and settings that silently reset at every launch.
+PREF_VALUES = {
+    "theme": {"system", "light", "dark"},
+    "locale": {"system", "en", "it"},
+}
+DEFAULT_PREFS = {"theme": "system", "locale": "system"}
+
+
 class Api:
     """The operations the UI is allowed to ask for, and nothing else."""
 
-    def __init__(self, daemon):
+    def __init__(self, daemon, prefs_path=None):
         self.daemon = daemon
+        self.prefs_path = Path(prefs_path) if prefs_path else None
         self._remotes_cache = None
+        self.prefs = self._load_prefs()
+
+    # -- preferences -------------------------------------------------------
+
+    def _load_prefs(self):
+        prefs = dict(DEFAULT_PREFS)
+        if not self.prefs_path or not self.prefs_path.is_file():
+            return prefs
+        try:
+            stored = json.loads(self.prefs_path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            return prefs  # a corrupt file is not worth failing startup over
+        if isinstance(stored, dict):
+            for key, allowed in PREF_VALUES.items():
+                if stored.get(key) in allowed:
+                    prefs[key] = stored[key]
+        return prefs
+
+    def op_prefs_set(self, payload):
+        for key, allowed in PREF_VALUES.items():
+            if key in payload:
+                if payload[key] not in allowed:
+                    raise ApiError("invalid value for {}".format(key))
+                self.prefs[key] = payload[key]
+        if self.prefs_path:
+            try:
+                self.prefs_path.parent.mkdir(parents=True, exist_ok=True)
+                self.prefs_path.write_text(json.dumps(self.prefs, indent=2), encoding="utf-8")
+            except OSError as exc:
+                raise ApiError("could not save settings: {}".format(exc)) from exc
+        return dict(self.prefs)
 
     # -- helpers -----------------------------------------------------------
 
@@ -354,6 +397,7 @@ class Api:
         "transfer_cancel": op_transfer_cancel,
         "verify": op_verify,
         "delete": op_delete,
+        "prefs_set": op_prefs_set,
     }
 
     def dispatch(self, name, payload):
@@ -422,6 +466,10 @@ class _Handler(BaseHTTPRequestHandler):
         if filename == "index.html":
             data = data.replace(b"__DRIVEFERRY_TOKEN__", self.server.token.encode())
             data = data.replace(b"__DRIVEFERRY_PLATFORM__", self.server.platform.encode())
+            # Both values come from a fixed whitelist, so there is nothing to
+            # escape and nothing a stored file could inject into the page.
+            for key, value in self.server.api.prefs.items():
+                data = data.replace("__DRIVEFERRY_{}__".format(key.upper()).encode(), value.encode())
         content_type = mimetypes.guess_type(filename)[0] or "application/octet-stream"
         return self._send(HTTPStatus.OK, data, content_type + "; charset=utf-8")
 

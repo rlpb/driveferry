@@ -1,14 +1,14 @@
 <div align="center">
 
-<img src="docs/hero.png" alt="DriveFerry" width="820">
+<img src="docs/hero.svg" alt="DriveFerry" width="820">
 
 # DriveFerry
 
 **Move folders between Google Drive accounts, visually.**
 A native desktop app on top of rclone, for the one thing Google Drive still cannot do.
 
-[![CI](https://github.com/OWNER/driveferry/actions/workflows/ci.yml/badge.svg)](https://github.com/OWNER/driveferry/actions/workflows/ci.yml)
-[![Latest release](https://img.shields.io/github/v/release/OWNER/driveferry?display_name=tag&sort=semver)](https://github.com/OWNER/driveferry/releases/latest)
+[![CI](https://github.com/rlpb/driveferry/actions/workflows/ci.yml/badge.svg)](https://github.com/rlpb/driveferry/actions/workflows/ci.yml)
+[![Latest release](https://img.shields.io/github/v/release/rlpb/driveferry?display_name=tag&sort=semver)](https://github.com/rlpb/driveferry/releases/latest)
 [![License: MIT](https://img.shields.io/badge/license-MIT-black.svg)](LICENSE)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue.svg)](pyproject.toml)
 [![Platforms](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)](#download)
@@ -66,7 +66,7 @@ what to move, and you press one button.
 ## Download
 
 Grab the build for your system from the
-[latest release](https://github.com/OWNER/driveferry/releases/latest):
+[latest release](https://github.com/rlpb/driveferry/releases/latest):
 
 | System | File | Notes |
 | --- | --- | --- |
@@ -87,7 +87,7 @@ gives you the command:
 ### Or run it from source
 
 ```bash
-git clone https://github.com/OWNER/driveferry
+git clone https://github.com/rlpb/driveferry
 cd driveferry
 python -m venv .venv && . .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -e .
@@ -232,7 +232,7 @@ Yes. Any remote you configure in rclone shows up in both pickers.
 The app runs a small HTTP server on `127.0.0.1` and drives a local rclone
 daemon. Both are locked down: per-run credentials, a session token, a loopback
 `Host` check against DNS rebinding, no CORS, a strict Content-Security-Policy,
-and an API that exposes exactly nine operations with validated arguments.
+and an API that exposes exactly ten operations with validated arguments.
 
 The details, including the threat model and what is deliberately out of scope,
 are in [SECURITY.md](SECURITY.md).
@@ -242,7 +242,7 @@ are in [SECURITY.md](SECURITY.md).
 ```
 driveferry/
 ├── rclone.py    finds the binary, owns the rcd process, speaks the rc API
-├── server.py    the local HTTP API, its guards, and the nine operations
+├── server.py    the local HTTP API, its guards, and the ten operations
 ├── app.py       startup, the frameless window, the window-control bridge
 └── web/         the interface: no framework, no build step, no bundler
 tests/

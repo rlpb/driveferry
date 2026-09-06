@@ -4,5 +4,5 @@ contact_links:
     url: https://forum.rclone.org/
     about: Remote setup, OAuth, quotas and backend behaviour are answered best by the rclone community.
   - name: Security report
-    url: https://github.com/OWNER/driveferry/security/advisories/new
+    url: https://github.com/rlpb/driveferry/security/advisories/new
     about: Report a vulnerability privately instead of opening an issue.

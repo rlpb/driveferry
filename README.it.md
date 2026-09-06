@@ -1,14 +1,14 @@
 <div align="center">
 
-<img src="docs/hero.png" alt="DriveFerry" width="820">
+<img src="docs/hero.svg" alt="DriveFerry" width="820">
 
 # DriveFerry
 
 **Sposta cartelle da un account Google Drive a un altro, vedendo cosa succede.**
 Un'app desktop nativa costruita su rclone, per l'unica cosa che Google Drive ancora non fa.
 
-[![CI](https://github.com/OWNER/driveferry/actions/workflows/ci.yml/badge.svg)](https://github.com/OWNER/driveferry/actions/workflows/ci.yml)
-[![Ultima release](https://img.shields.io/github/v/release/OWNER/driveferry?display_name=tag&sort=semver)](https://github.com/OWNER/driveferry/releases/latest)
+[![CI](https://github.com/rlpb/driveferry/actions/workflows/ci.yml/badge.svg)](https://github.com/rlpb/driveferry/actions/workflows/ci.yml)
+[![Ultima release](https://img.shields.io/github/v/release/rlpb/driveferry?display_name=tag&sort=semver)](https://github.com/rlpb/driveferry/releases/latest)
 [![Licenza: MIT](https://img.shields.io/badge/license-MIT-black.svg)](LICENSE)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue.svg)](pyproject.toml)
 
@@ -66,7 +66,7 @@ spostare e premi un pulsante.
 ## Scarica
 
 Prendi il file per il tuo sistema dalla
-[release più recente](https://github.com/OWNER/driveferry/releases/latest):
+[release più recente](https://github.com/rlpb/driveferry/releases/latest):
 
 | Sistema | File | Note |
 | --- | --- | --- |
@@ -86,7 +86,7 @@ Serve rclone sulla macchina. Se manca, l'app te lo dice e ti dà il comando:
 ### Oppure dal sorgente
 
 ```bash
-git clone https://github.com/OWNER/driveferry
+git clone https://github.com/rlpb/driveferry
 cd driveferry
 python -m venv .venv && .venv\Scripts\activate
 pip install -e .
@@ -237,7 +237,7 @@ Sì. Qualsiasi remote configurato in rclone compare in entrambi i selettori.
 L'app avvia un piccolo server HTTP su `127.0.0.1` e pilota un daemon rclone
 locale. Entrambi sono chiusi: credenziali generate a ogni avvio, token di
 sessione, controllo dell'header `Host` contro il DNS rebinding, nessun CORS,
-Content-Security-Policy stretta e un'API che espone esattamente nove operazioni
+Content-Security-Policy stretta e un'API che espone esattamente dieci operazioni
 con argomenti validati.
 
 I dettagli, modello di minaccia compreso, sono in [SECURITY.md](SECURITY.md).
@@ -247,7 +247,7 @@ I dettagli, modello di minaccia compreso, sono in [SECURITY.md](SECURITY.md).
 ```
 driveferry/
 ├── rclone.py    trova il binario, gestisce il processo rcd, parla l'API rc
-├── server.py    l'API HTTP locale, le sue guardie e le nove operazioni
+├── server.py    l'API HTTP locale, le sue guardie e le dieci operazioni
 ├── app.py       avvio, finestra senza cornice, ponte per i pulsanti finestra
 └── web/         l'interfaccia: nessun framework, nessuna build, nessun bundler
 tests/

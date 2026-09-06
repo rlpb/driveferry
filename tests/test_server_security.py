@@ -95,11 +95,12 @@ def test_a_json_array_body_is_refused(server):
     assert status == 400
 
 
-def test_the_page_is_served_with_the_token_substituted(server):
+def test_the_page_is_served_with_every_placeholder_substituted(server):
     status, body = request(server, "/", method="GET")
     assert status == 200
-    assert b"__DRIVEFERRY_TOKEN__" not in body
+    assert b"__DRIVEFERRY_" not in body
     assert server.token.encode() in body
+    assert b'data-pref-theme="system"' in body
 
 
 def test_unknown_static_paths_404_rather_than_reading_the_disk(server):

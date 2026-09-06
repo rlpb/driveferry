@@ -8,40 +8,34 @@
 const TOKEN = document.body.dataset.token;
 const PLATFORM = document.body.dataset.platform || "";
 const POLL_MS = 700;
-const STORE = { theme: "driveferry.theme", locale: "driveferry.locale" };
 
 const state = {
   mode: "copy",
   active: "src",
   remotes: [],
   info: {},
+  status: null,
   panes: {
-    src: { remote: null, path: "", entries: [], selected: new Set(), cursor: -1, loading: false },
-    dst: { remote: null, path: "", entries: [], selected: new Set(), cursor: -1, loading: false },
+    src: { remote: null, path: "", entries: [], selected: new Set(), cursor: -1, loading: false, about: null },
+    dst: { remote: null, path: "", entries: [], selected: new Set(), cursor: -1, loading: false, about: null },
   },
 };
 
-/* ---------- preferences (they must survive a private-mode profile) ---------- */
+/* ---------- preferences ---------- */
 
-function readPref(key, fallback) {
-  try {
-    return localStorage.getItem(key) || fallback;
-  } catch (error) {
-    return fallback;
-  }
-}
+/* They arrive with the page and are saved by the local service, not by the
+   browser: the server listens on a fresh port every run, and browser storage
+   is per origin, so anything kept there would be gone at the next launch. */
+const prefs = {
+  theme: document.body.dataset.prefTheme || "system",
+  locale: document.body.dataset.prefLocale || "system",
+};
 
-function writePref(key, value) {
-  try {
-    localStorage.setItem(key, value);
-  } catch (error) {
-    /* storage disabled: the choice simply does not outlive this window */
-  }
+function savePrefs() {
+  api("prefs_set", prefs).catch((error) => toast(error.message, true));
 }
 
 /* ---------- i18n ---------- */
-
-const prefs = { theme: readPref(STORE.theme, "system"), locale: readPref(STORE.locale, "system") };
 
 function activeLocale() {
   if (prefs.locale !== "system" && window.DF_LOCALES[prefs.locale]) return prefs.locale;
@@ -223,6 +217,12 @@ function toast(message, isError) {
 function setStatus(text, kind) {
   el.statusText.textContent = text;
   el.statusDot.className = "status-dot" + (kind ? " is-" + kind : "");
+}
+
+/** Status set from a translation key, so it can be redrawn in a new language. */
+function setStatusKey(key, params, kind) {
+  state.status = { key: key, params: params, kind: kind };
+  setStatus(t(key, params), kind);
 }
 
 function other(side) {
@@ -461,8 +461,27 @@ async function refreshPane(side, options) {
   }
 
   api("about", { remote: pane.remote })
-    .then((about) => renderStorage(side, about))
-    .catch(() => renderStorage(side, null));
+    .then((about) => {
+      pane.about = about;
+      renderStorage(side, about);
+    })
+    .catch(() => {
+      pane.about = null;
+      renderStorage(side, null);
+    });
+}
+
+/** Redraw every string the current language touches, without refetching. */
+function renderAll() {
+  applyTranslations();
+  renderAccounts();
+  Object.keys(el.panes).forEach((side) => {
+    renderCrumbs(side);
+    renderList(side);
+    renderStorage(side, state.panes[side].about);
+  });
+  renderGo();
+  if (state.status) setStatus(t(state.status.key, state.status.params), state.status.kind);
 }
 
 function navigate(side, path) {
@@ -471,7 +490,7 @@ function navigate(side, path) {
 }
 
 async function loadState() {
-  setStatus(t("status.connecting"), "busy");
+  setStatusKey("status.connecting", {}, "busy");
   try {
     const data = await api("state", {});
     state.info = data;
@@ -481,12 +500,9 @@ async function loadState() {
       state.panes.dst.remote = (state.remotes[1] || state.remotes[0] || {}).name || null;
     }
     renderAccounts();
-    setStatus(
-      t("status.ready", {
-        version: data.rclone_version,
-        count: state.remotes.length,
-        plural: state.remotes.length === 1 ? "" : "s",
-      }),
+    setStatusKey(
+      "status.ready",
+      { version: data.rclone_version, count: state.remotes.length, n: state.remotes.length },
       "ok"
     );
     if (!state.remotes.length) {
@@ -814,7 +830,7 @@ function openSettings() {
       prefs.theme,
       (value) => {
         prefs.theme = value;
-        writePref(STORE.theme, value);
+        savePrefs();
         applyTheme();
         openSettings();
       }
@@ -833,28 +849,21 @@ function openSettings() {
       prefs.locale,
       (value) => {
         prefs.locale = value;
-        writePref(STORE.locale, value);
-        applyTranslations();
-        renderAccounts();
-        renderGo();
-        Object.keys(el.panes).forEach((side) => {
-          renderList(side);
-          renderCrumbs(side);
-        });
+        savePrefs();
+        renderAll();
         openSettings();
       }
     )
   );
 
-  el.sheetBody.appendChild(group("settings.appearance", [themeRow], "settings.appearanceHint"));
-  el.sheetBody.appendChild(group("settings.language", [localeRow], "settings.languageHint"));
+  el.sheetBody.appendChild(group("settings.general", [themeRow, localeRow], "settings.generalHint"));
   el.sheetBody.appendChild(
     group(
       "settings.about",
       [
         valueRow("settings.accounts", String(state.remotes.length)),
-        valueRow("settings.about", "rclone " + (state.info.rclone_version || "-")),
-        valueRow("action.refresh", state.info.rclone_binary || "-"),
+        valueRow("settings.rcloneVersion", state.info.rclone_version || "-"),
+        valueRow("settings.rclonePath", state.info.rclone_binary || "-"),
       ],
       "settings.accountsHint"
     )
@@ -978,7 +987,7 @@ async function startTransfer(context, isMove, dryRun) {
 
   const jobIds = started.jobs.map((job) => job.jobid);
   const byJob = new Map(started.jobs.map((job) => [job.jobid, job.name]));
-  setStatus(t("status.transferring"), "busy");
+  setStatusKey("status.transferring", {}, "busy");
 
   const cancel = button(t("btn.cancelTransfer"), "btn-danger", async () => {
     cancel.disabled = true;
@@ -1032,7 +1041,7 @@ async function startTransfer(context, isMove, dryRun) {
     el.sheetClose.disabled = false;
     fill.classList.toggle("is-done", status.failed.length === 0);
     fill.classList.toggle("is-failed", status.failed.length > 0);
-    setStatus(t("status.idle"), "ok");
+    setStatusKey("status.idle", {}, "ok");
     refreshPane(context.toSide);
 
     if (status.failed.length) {

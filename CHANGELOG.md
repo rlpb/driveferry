@@ -44,5 +44,5 @@ First public release.
 - Account secrets never leave the Python process; the UI only receives a remote
   name and its backend type.
 
-[Unreleased]: https://github.com/OWNER/driveferry/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/OWNER/driveferry/releases/tag/v0.1.0
+[Unreleased]: https://github.com/rlpb/driveferry/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/rlpb/driveferry/releases/tag/v0.1.0

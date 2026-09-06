@@ -40,7 +40,7 @@ Concretely:
   refused, so a page on another site cannot call the API from your browser.
 - The page runs under a strict Content-Security-Policy: no inline script, no
   inline style, no external origin, no framing.
-- The API surface is an explicit list of nine operations. Remote names are
+- The API surface is an explicit list of ten operations. Remote names are
   validated against your configured rclone remotes, so the UI cannot make
   rclone open an arbitrary filesystem, and paths containing `..` are rejected.
 - Deleting anything requires an explicit confirmation value in the request. The

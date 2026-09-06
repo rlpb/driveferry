@@ -8,9 +8,11 @@ bridge below is what lets those painted buttons actually move the real window.
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 import time
 import webbrowser
+from pathlib import Path
 
 from . import __version__
 from .rclone import RcloneDaemon, RcloneError, find_rclone, install_hint
@@ -60,6 +62,26 @@ class WindowBridge:
         return True
 
 
+def storage_path():
+    """Where the window keeps its own state.
+
+    pywebview starts in private mode, which throws the web view's storage away
+    on exit: the appearance and language chosen in Settings would be forgotten
+    at every launch. Pointing it at a real folder is what makes those settings
+    stick. Nothing secret is kept here; the OAuth tokens stay in rclone's own
+    config.
+    """
+    if os.name == "nt":
+        base = os.environ.get("LOCALAPPDATA") or os.path.expanduser("~")
+    elif sys.platform == "darwin":
+        base = os.path.expanduser("~/Library/Application Support")
+    else:
+        base = os.environ.get("XDG_DATA_HOME") or os.path.expanduser("~/.local/share")
+    path = Path(base) / "DriveFerry"
+    path.mkdir(parents=True, exist_ok=True)
+    return str(path)
+
+
 def build_parser():
     parser = argparse.ArgumentParser(
         prog="driveferry",
@@ -101,7 +123,7 @@ def open_window(url, use_browser=False, framed=False):
                 background_color="#F2F2F7",
                 js_api=WindowBridge(),
             )
-            webview.start()
+            webview.start(private_mode=False, storage_path=storage_path())
             return "webview"
     webbrowser.open(url)
     print("DriveFerry is running at {} - press Ctrl+C to stop.".format(url))
@@ -144,7 +166,8 @@ def main(argv=None):
             )
             return 4
 
-        server = DriveFerryServer(Api(daemon), port=args.port, verbose=args.verbose)
+        api = Api(daemon, prefs_path=Path(storage_path()) / "settings.json")
+        server = DriveFerryServer(api, port=args.port, verbose=args.verbose)
         server.serve_in_background()
         print(
             "DriveFerry {} - rclone {} - {}".format(__version__, daemon.version().get("version"), server.url)

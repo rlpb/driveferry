@@ -1,0 +1,11 @@
+# Normalise everything to LF in the repository. start.sh in particular breaks
+# on Linux and macOS if it is checked out with CRLF.
+* text=auto eol=lf
+
+*.cmd text eol=crlf
+*.bat text eol=crlf
+
+*.png binary
+*.jpg binary
+*.ico binary
+*.icns binary

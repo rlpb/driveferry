@@ -183,17 +183,27 @@ Con l'interruttore **Lato server** attivo, DriveFerry chiede a rclone
 l'infrastruttura di Google: niente download, niente upload, la tua velocità di
 connessione smette di contare.
 
-Non viene accettata sempre. Google la concede quando l'account di destinazione
-può già leggere il file di origine: in pratica quando la cartella di origine è
-condivisa con l'account di destinazione, oppure quando i due account
-appartengono alla stessa organizzazione Workspace. Se Google rifiuta, rclone
-ripiega su un trasferimento normale attraverso il tuo computer e il
-trasferimento va comunque a buon fine. Il riepilogo mostra cosa è successo
-davvero.
+È spenta di default, perché Google la concede solo se l'account di destinazione
+può già leggere il file di origine. In pratica: la cartella di origine è
+condivisa con l'account di destinazione, oppure i due account appartengono alla
+stessa organizzazione Workspace.
 
-Fra due account Gmail personali scollegati, aspettati il ripiego. Condividere
-prima la cartella di origine con l'account di destinazione rende la copia lato
-server molto più probabile.
+Quando Google rifiuta, **non ripiega**. La richiesta di copia porta le
+credenziali dell'account di destinazione, quindi Google risponde che il file di
+origine non esiste:
+
+```
+googleapi: Error 404: File not found: 1B1W2ACFT_CtbMSqP3gPUOxX4eVei2szO., notFound
+```
+
+DriveFerry riconosce quella risposta e propone di rifare il trasferimento senza
+copia lato server, che passa dal tuo computer e funziona fra due account
+qualsiasi. Quello che è già arrivato resta, quindi il nuovo tentativo sposta
+solo ciò che manca.
+
+Fra due account Gmail personali scollegati, lascia l'interruttore spento.
+Condividere prima la cartella di origine con l'account di destinazione è ciò
+che rende possibile la copia lato server.
 
 ## Cosa DriveFerry non è
 

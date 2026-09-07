@@ -6,6 +6,29 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-09-07
+
+Everything here came from the first run against two real Google accounts.
+
+### Fixed
+
+- Server-side copy is off by default, and the documentation no longer claims
+  rclone falls back when Google refuses it. It does not: the copy request
+  carries the destination account's credentials, so Google answers `404 File
+  not found` on the source and the transfer stops, leaving a folder created and
+  empty. A failed server-side transfer now says so and offers to run again
+  without it.
+- The progress and storage bars were rounded rectangles inside a stretched
+  viewBox, which turned their corners into flattened ovals. They are drawn
+  square now and clipped by a rounded wrapper.
+- The progress bar sat at zero while rclone listed and compared, which on a
+  real Drive looks like a hang. It shows a moving stripe and a running count of
+  what has been looked at until there is a size to measure against.
+- The file list now says it is loading from Google Drive rather than showing
+  bare grey bars.
+- The storage line read like a contradiction, because Gmail and Photos share
+  the same quota as Drive. It states free space against the total instead.
+
 ## [0.3.0] - 2026-09-07
 
 ### Changed
@@ -91,7 +114,8 @@ First public release.
 - Account secrets never leave the Python process; the UI only receives a remote
   name and its backend type.
 
-[Unreleased]: https://github.com/rlpb/driveferry/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/rlpb/driveferry/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/rlpb/driveferry/releases/tag/v0.4.0
 [0.3.0]: https://github.com/rlpb/driveferry/releases/tag/v0.3.0
 [0.2.0]: https://github.com/rlpb/driveferry/releases/tag/v0.2.0
 [0.1.0]: https://github.com/rlpb/driveferry/releases/tag/v0.1.0

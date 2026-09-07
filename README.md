@@ -180,16 +180,27 @@ With the **Server-side** switch on, DriveFerry asks rclone for
 Google's infrastructure: nothing is downloaded, nothing is uploaded, and your
 connection speed stops mattering.
 
-It is not always accepted. Google grants it when the destination account can
-already read the source file, which in practice means the source folder is
-shared with the destination account, or both accounts belong to the same
-Workspace organisation. When Google refuses, rclone falls back to a normal
-transfer through your machine and the transfer still completes. The transfer
-summary shows what actually happened.
+It is off by default, because Google only grants it when the destination
+account can already read the source file. In practice that means the source
+folder is shared with the destination account, or both accounts belong to the
+same Workspace organisation.
 
-Between two unrelated personal Gmail accounts, expect the fallback. Sharing the
-source folder with the destination account first makes server-side copy far more
-likely.
+When Google refuses, **it does not fall back**. The copy request carries the
+destination account's credentials, so Google answers that the source file does
+not exist:
+
+```
+googleapi: Error 404: File not found: 1B1W2ACFT_CtbMSqP3gPUOxX4eVei2szO., notFound
+```
+
+DriveFerry recognises that answer and offers to run the transfer again without
+server-side copy, which routes the data through your machine and works between
+any two accounts. Whatever already arrived is kept, so the retry only moves
+what is missing.
+
+Between two unrelated personal Gmail accounts, leave the switch off. Sharing
+the source folder with the destination account first is what makes server-side
+copy possible.
 
 ## What DriveFerry is not
 

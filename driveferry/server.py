@@ -332,6 +332,11 @@ class Api:
                 "errors": stats.get("errors", 0),
                 "transfers": stats.get("transfers", 0),
                 "total_transfers": stats.get("totalTransfers", 0),
+                # Before any byte moves, rclone is listing and comparing. These
+                # two are the only sign of life during that stretch, which on a
+                # real Drive can last a while.
+                "listed": stats.get("listed", 0),
+                "checks": stats.get("checks", 0),
                 "server_side_copies": stats.get("serverSideCopies", 0),
                 "transferring": [
                     {

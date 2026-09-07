@@ -79,7 +79,7 @@
       <span class="switch-label" data-i18n="opt.dryRun">Dry run</span>
     </label>
     <label class="switch">
-      <input type="checkbox" id="opt-serverside" checked>
+      <input type="checkbox" id="opt-serverside">
       <span class="switch-track" aria-hidden="true"><span class="switch-knob"></span></span>
       <span class="switch-label" data-i18n="opt.serverSide">Server-side</span>
     </label>
@@ -118,10 +118,12 @@
     </header>
     <nav class="crumbs" data-role="crumbs" aria-label="Source path"></nav>
     <div class="storage" data-role="storage" hidden>
-      <svg class="storage-bar" viewBox="0 0 100 4" preserveAspectRatio="none" aria-hidden="true">
-        <rect class="storage-track" x="0" y="0" width="100" height="4" rx="2"/>
-        <rect class="storage-fill" x="0" y="0" width="0" height="4" rx="2"/>
-      </svg>
+      <div class="bar-clip storage-clip">
+        <svg class="storage-bar" viewBox="0 0 100 4" preserveAspectRatio="none" aria-hidden="true">
+          <rect class="storage-track" x="0" y="0" width="100" height="4"/>
+          <rect class="storage-fill" x="0" y="0" width="0" height="4"/>
+        </svg>
+      </div>
       <p class="storage-text" data-role="storage-text"></p>
     </div>
     <div class="list-wrap" data-role="drop">
@@ -158,10 +160,12 @@
     </header>
     <nav class="crumbs" data-role="crumbs" aria-label="Destination path"></nav>
     <div class="storage" data-role="storage" hidden>
-      <svg class="storage-bar" viewBox="0 0 100 4" preserveAspectRatio="none" aria-hidden="true">
-        <rect class="storage-track" x="0" y="0" width="100" height="4" rx="2"/>
-        <rect class="storage-fill" x="0" y="0" width="0" height="4" rx="2"/>
-      </svg>
+      <div class="bar-clip storage-clip">
+        <svg class="storage-bar" viewBox="0 0 100 4" preserveAspectRatio="none" aria-hidden="true">
+          <rect class="storage-track" x="0" y="0" width="100" height="4"/>
+          <rect class="storage-fill" x="0" y="0" width="0" height="4"/>
+        </svg>
+      </div>
       <p class="storage-text" data-role="storage-text"></p>
     </div>
     <div class="list-wrap" data-role="drop">

@@ -107,7 +107,7 @@ window.DF_LOCALES = {
 
     "foot.counts": "{folders} folder{fp} · {files} file{ip}",
     "foot.selected": "{n} selected",
-    "storage.text": "{used} of {total} used · {free} free",
+    "storage.text": "{free} free of {total}",
 
     "sheet.copyN": "Copy {n} item{p}",
     "sheet.moveN": "Move {n} item{p}",
@@ -117,7 +117,7 @@ window.DF_LOCALES = {
 
     "notice.dryRun": "Dry run: rclone reports what it would transfer and writes nothing.",
     "notice.moveSteps": "Move happens in three steps: copy, verify every file arrived, and only then delete the originals. The delete step needs a separate confirmation.",
-    "notice.serverSide": "Server-side copy is requested: when Google allows it between these two accounts, the data never passes through this computer. rclone falls back to a normal transfer when it does not.",
+    "notice.serverSide": "Server-side copy is requested: Google moves the data directly and nothing passes through this computer. It only works when the destination account can already read the source, so between two unrelated Google accounts it fails instead of falling back.",
     "notice.checking": "Checking that every file arrived…",
     "notice.verified": "Every file arrived: file counts and byte totals match on both sides.",
     "notice.mismatch": "Source and destination do not match. Nothing was deleted. Run the transfer again.",
@@ -126,6 +126,8 @@ window.DF_LOCALES = {
     "notice.failed": "{n} item(s) failed: {error}",
     "notice.deleteWarning": "The copy is verified. Deleting the originals from {account} cannot be undone from here; in Google Drive they go to the trash.",
 
+    "notice.serverSideFailed": "Google refused the server-side copy: the destination account cannot see the source files. Retry without it and the data will pass through this computer instead.",
+    "btn.retryDirect": "Retry without server-side",
     "btn.startCopy": "Start copy",
     "btn.copyN": "Copy {n} item{p}",
     "btn.runDryRun": "Run dry run",
@@ -142,6 +144,8 @@ window.DF_LOCALES = {
     "item.verified": "{count} file{p} · {size}",
 
     "progress.of": "{done} of {total}",
+    "progress.preparing": "Looking through both sides, {n} items so far…",
+    "list.loading": "Loading from Google Drive…",
     "progress.eta": "ETA {eta}",
 
     "toast.copied": "Copied {n} item{p}",
@@ -255,7 +259,7 @@ window.DF_LOCALES = {
 
     "foot.counts": "{folders} cartell{fp} · {files} file",
     "foot.selected": "{n} selezionat{sp}",
-    "storage.text": "{used} usati su {total} · {free} liberi",
+    "storage.text": "{free} liberi su {total}",
 
     "sheet.copyN": "Copia {n} element{p}",
     "sheet.moveN": "Sposta {n} element{p}",
@@ -265,7 +269,7 @@ window.DF_LOCALES = {
 
     "notice.dryRun": "Simulazione: rclone dice cosa trasferirebbe e non scrive niente.",
     "notice.moveSteps": "Lo spostamento avviene in tre passi: copia, verifica che ogni file sia arrivato e solo dopo cancella gli originali. La cancellazione richiede una conferma separata.",
-    "notice.serverSide": "Copia lato server richiesta: quando Google la consente fra questi due account, i dati non passano da questo computer. Se non la consente, rclone usa un trasferimento normale.",
+    "notice.serverSide": "Copia lato server richiesta: Google sposta i dati direttamente e niente passa da questo computer. Funziona solo se l'account di destinazione può già leggere l'origine, quindi fra due account Google scollegati fallisce invece di ripiegare.",
     "notice.checking": "Controllo che ogni file sia arrivato…",
     "notice.verified": "Tutti i file sono arrivati: numero di file e byte totali coincidono sui due lati.",
     "notice.mismatch": "Origine e destinazione non coincidono. Non è stato cancellato niente. Ripeti il trasferimento.",
@@ -274,6 +278,8 @@ window.DF_LOCALES = {
     "notice.failed": "{n} elemento/i non riusciti: {error}",
     "notice.deleteWarning": "La copia è verificata. Cancellare gli originali da {account} non è annullabile da qui; su Google Drive finiscono nel cestino.",
 
+    "notice.serverSideFailed": "Google ha rifiutato la copia lato server: l'account di destinazione non vede i file di origine. Riprova senza, e i dati passeranno da questo computer.",
+    "btn.retryDirect": "Riprova senza copia lato server",
     "btn.startCopy": "Avvia la copia",
     "btn.copyN": "Copia {n} element{p}",
     "btn.runDryRun": "Esegui la simulazione",
@@ -290,6 +296,8 @@ window.DF_LOCALES = {
     "item.verified": "{count} file · {size}",
 
     "progress.of": "{done} su {total}",
+    "progress.preparing": "Sto guardando i due lati, {n} elementi finora…",
+    "list.loading": "Caricamento da Google Drive…",
     "progress.eta": "Stima {eta}",
 
     "toast.copied": "Copiati {n} element{p}",

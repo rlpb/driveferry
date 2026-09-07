@@ -441,6 +441,11 @@ body.is-web .tb-controls, body.is-web .tb-lights { display: none; }
    ============================================================ */
 
 .storage { flex: none; padding: 9px 12px 10px; border-bottom: 0.5px solid var(--separator); }
+/* A rounded rect inside a stretched viewBox turns its corners into a
+   flattened oval, so the bars are drawn square and clipped by a rounded
+   wrapper instead. */
+.bar-clip { overflow: hidden; border-radius: 999px; }
+.storage-clip { height: 4px; }
 .storage-bar { display: block; width: 100%; height: 4px; }
 .storage-track { fill: var(--fill-2); stroke: none; }
 .storage-fill { fill: var(--blue); stroke: none; transition: width var(--dur) var(--ease-out); }
@@ -784,6 +789,7 @@ body.is-web .tb-controls, body.is-web .tb-lights { display: none; }
 .item.is-failed svg, .item.is-failed .item-state { color: var(--red); }
 
 .progress { margin-bottom: 12px; }
+.progress-clip { height: 8px; }
 .progress-bar { display: block; width: 100%; height: 8px; }
 .progress-track { fill: var(--fill-2); stroke: none; }
 .progress-fill { fill: var(--blue); stroke: none; transition: width 300ms linear; }
@@ -943,3 +949,29 @@ body.is-web .tb-controls, body.is-web .tb-lights { display: none; }
 
 .step-title { margin: 4px 0 8px; font-size: 15px; font-weight: 600; letter-spacing: -0.01em; }
 .step-body { margin: 0 0 14px; color: var(--label-2); line-height: 1.55; }
+
+/* ============================================================
+   Waiting states
+   ============================================================ */
+
+.skel-label { margin: 10px 0 14px; font-size: 12px; color: var(--label-3); }
+
+/* Before rclone knows the size of the job there is no percentage to show, so
+   a stripe sweeps across the track instead of a bar sitting at zero. */
+.progress-clip { position: relative; }
+.progress-sweep {
+  position: absolute;
+  inset: 0;
+  display: none;
+  background: linear-gradient(90deg, transparent 0%, var(--blue) 45%, var(--blue) 55%, transparent 100%);
+  opacity: 0.85;
+  animation: sweep 1.5s ease-in-out infinite;
+}
+.progress.is-preparing .progress-sweep { display: block; }
+@keyframes sweep {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(100%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .progress-sweep { animation: none; opacity: 0.4; }
+}

@@ -297,6 +297,10 @@ function renderSkeleton(side) {
   el.panes[side].empty.hidden = true;
   const wrap = document.createElement("li");
   wrap.className = "skeleton";
+  const label = document.createElement("p");
+  label.className = "skel-label";
+  label.textContent = t("list.loading");
+  wrap.appendChild(label);
   ["w-70", "w-45", "w-85", "w-70", "w-45"].forEach((width) => {
     const bar = document.createElement("div");
     bar.className = "skel-row " + width;
@@ -415,7 +419,6 @@ function renderStorage(side, about) {
   nodes.storageFill.classList.toggle("is-tight", ratio >= 0.8 && ratio < 0.95);
   nodes.storageFill.classList.toggle("is-full", ratio >= 0.95);
   nodes.storageText.textContent = t("storage.text", {
-    used: formatBytes(about.used),
     total: formatBytes(about.total),
     free: formatBytes(about.free),
   });
@@ -753,11 +756,13 @@ function itemList(names, dirs) {
 
 function progressBlock() {
   const wrap = document.createElement("div");
-  wrap.className = "progress";
+  wrap.className = "progress is-preparing";
   wrap.innerHTML =
+    '<div class="bar-clip progress-clip">' +
     '<svg class="progress-bar" viewBox="0 0 100 8" preserveAspectRatio="none" aria-hidden="true">' +
-    '<rect class="progress-track" x="0" y="0" width="100" height="8" rx="4"/>' +
-    '<rect class="progress-fill" x="0" y="0" width="0" height="8" rx="4"/></svg>' +
+    '<rect class="progress-track" x="0" y="0" width="100" height="8"/>' +
+    '<rect class="progress-fill" x="0" y="0" width="0" height="8"/></svg>' +
+    '<div class="progress-sweep" aria-hidden="true"></div></div>' +
     '<p class="progress-meta"><span class="progress-done"></span>' +
     '<span class="progress-speed">-</span><span class="progress-eta">-</span></p>';
   return wrap;
@@ -1292,19 +1297,23 @@ function selectionContext() {
   return { fromSide, toSide, from, to: state.panes[toSide], names, dirs };
 }
 
+function buildTransferBody(context, isMove, dryRun, serverSide) {
+  openSheet(t(isMove ? "sheet.moveN" : "sheet.copyN", { n: context.names.length }));
+  el.sheetBody.appendChild(routeSummary(context.fromSide, context.toSide));
+  if (dryRun) el.sheetBody.appendChild(notice("info", "i-check", t("notice.dryRun")));
+  if (isMove && !dryRun) el.sheetBody.appendChild(notice("warn", "i-alert", t("notice.moveSteps")));
+  if (serverSide) el.sheetBody.appendChild(notice("info", "i-cloud", t("notice.serverSide")));
+  el.sheetBody.appendChild(itemList(context.names, context.dirs));
+}
+
 function openTransferSheet() {
   const context = selectionContext();
   if (!context.names.length || !context.to.remote) return;
 
   const isMove = state.mode === "move";
   const dryRun = el.dry.checked;
-  openSheet(t(isMove ? "sheet.moveN" : "sheet.copyN", { n: context.names.length }));
-
-  el.sheetBody.appendChild(routeSummary(context.fromSide, context.toSide));
-  if (dryRun) el.sheetBody.appendChild(notice("info", "i-check", t("notice.dryRun")));
-  if (isMove && !dryRun) el.sheetBody.appendChild(notice("warn", "i-alert", t("notice.moveSteps")));
-  if (el.serverSide.checked) el.sheetBody.appendChild(notice("info", "i-cloud", t("notice.serverSide")));
-  el.sheetBody.appendChild(itemList(context.names, context.dirs));
+  const serverSide = el.serverSide.checked;
+  buildTransferBody(context, isMove, dryRun, serverSide);
 
   const label = dryRun
     ? t("btn.runDryRun")
@@ -1314,11 +1323,13 @@ function openTransferSheet() {
 
   el.sheetFoot.appendChild(button(t("action.cancel"), "", closeSheet));
   el.sheetFoot.appendChild(
-    button(label, isMove && !dryRun ? "btn-warn" : "btn-primary", () => startTransfer(context, isMove, dryRun))
+    button(label, isMove && !dryRun ? "btn-warn" : "btn-primary", () =>
+      startTransfer(context, isMove, dryRun, serverSide)
+    )
   );
 }
 
-async function startTransfer(context, isMove, dryRun) {
+async function startTransfer(context, isMove, dryRun, serverSide) {
   el.sheetFoot.textContent = "";
   el.sheetClose.disabled = true;
   const progress = progressBlock();
@@ -1338,7 +1349,7 @@ async function startTransfer(context, isMove, dryRun) {
       names: context.names,
       dirs: Array.from(context.dirs),
       dry_run: dryRun,
-      server_side: el.serverSide.checked,
+      server_side: serverSide,
     });
   } catch (error) {
     el.sheetClose.disabled = false;
@@ -1369,14 +1380,29 @@ async function startTransfer(context, isMove, dryRun) {
     }
 
     const stats = status.stats;
-    const ratio = stats.total_bytes ? Math.min(1, stats.bytes / stats.total_bytes) : status.finished ? 1 : 0;
-    fill.setAttribute("width", String((ratio * 100).toFixed(2)));
-    doneLabel.textContent = t("progress.of", {
-      done: formatBytes(stats.bytes),
-      total: formatBytes(stats.total_bytes),
-    });
-    speedLabel.textContent = formatSpeed(stats.speed);
-    etaLabel.textContent = t("progress.eta", { eta: formatEta(stats.eta) });
+    /* Until rclone has finished listing and comparing, total_bytes is zero and
+       a percentage bar would sit at 0 looking broken. Show a moving stripe and
+       say what it is doing instead. */
+    const preparing = !status.finished && !stats.total_bytes;
+    progress.classList.toggle("is-preparing", preparing);
+    if (preparing) {
+      doneLabel.textContent = t("progress.preparing", { n: stats.listed || 0 });
+      speedLabel.textContent = "";
+      etaLabel.textContent = "";
+    } else {
+      const ratio = stats.total_bytes
+        ? Math.min(1, stats.bytes / stats.total_bytes)
+        : status.finished
+          ? 1
+          : 0;
+      fill.setAttribute("width", String((ratio * 100).toFixed(2)));
+      doneLabel.textContent = t("progress.of", {
+        done: formatBytes(stats.bytes),
+        total: formatBytes(stats.total_bytes),
+      });
+      speedLabel.textContent = formatSpeed(stats.speed);
+      etaLabel.textContent = t("progress.eta", { eta: formatEta(stats.eta) });
+    }
 
     status.jobs.forEach((job) => {
       const item = el.sheetBody.querySelector('.item[data-name="' + CSS.escape(byJob.get(job.jobid)) + '"]');
@@ -1410,6 +1436,20 @@ async function startTransfer(context, isMove, dryRun) {
       el.sheetBody.appendChild(
         notice("danger", "i-alert", t("notice.failed", { n: status.failed.length, error: status.failed[0].error }))
       );
+      /* Google answers a cross-account server-side copy with a 404 on the
+         source file, because the request carries the destination account's
+         credentials and that account cannot see it. Offer the way out. */
+      const refused = serverSide && /notFound|404/i.test(status.failed[0].error || "");
+      if (refused) {
+        el.sheetBody.appendChild(notice("warn", "i-cloud", t("notice.serverSideFailed")));
+        el.sheetFoot.appendChild(
+          button(t("btn.retryDirect"), "btn-primary", () => {
+            el.serverSide.checked = false;
+            buildTransferBody(context, isMove, dryRun, false);
+            startTransfer(context, isMove, dryRun, false);
+          })
+        );
+      }
       el.sheetFoot.appendChild(button(t("action.close"), "", closeSheet));
       return;
     }

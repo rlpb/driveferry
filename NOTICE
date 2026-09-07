@@ -1,0 +1,10 @@
+DriveFerry
+Copyright 2026 rlpb
+
+This product includes software developed by rlpb
+(https://github.com/rlpb/driveferry).
+
+DriveFerry drives rclone (https://rclone.org), which is a separate program
+under the MIT licence and is not distributed as part of this product. rclone
+does the transfers: OAuth, resumable uploads, checksums, retries and
+server-side copy.

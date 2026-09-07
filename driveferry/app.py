@@ -61,6 +61,15 @@ class WindowBridge:
             _WINDOW.destroy()
         return True
 
+    def open_guide(self):
+        """Open rclone's client-ID guide in the real browser.
+
+        It takes no argument on purpose: the page can ask for this one page and
+        nothing else, so it can never steer the window somewhere unexpected.
+        """
+        webbrowser.open("https://rclone.org/drive/#making-your-own-client-id")
+        return True
+
 
 def storage_path():
     """Where the window keeps its own state.

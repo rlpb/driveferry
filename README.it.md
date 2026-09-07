@@ -9,7 +9,7 @@ Un'app desktop nativa costruita su rclone, per l'unica cosa che Google Drive anc
 
 [![CI](https://github.com/rlpb/driveferry/actions/workflows/ci.yml/badge.svg)](https://github.com/rlpb/driveferry/actions/workflows/ci.yml)
 [![Ultima release](https://img.shields.io/github/v/release/rlpb/driveferry?display_name=tag&sort=semver)](https://github.com/rlpb/driveferry/releases/latest)
-[![Licenza: MIT](https://img.shields.io/badge/license-MIT-black.svg)](LICENSE)
+[![Licenza: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-black.svg)](LICENSE)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue.svg)](pyproject.toml)
 
 [Scarica](#scarica) · [Come funziona](#come-funziona-un-trasferimento) · [Sicurezza](#sicurezza-dei-dati) · [Domande](#domande-frequenti) · [English](README.md)
@@ -39,6 +39,9 @@ spostare e premi un pulsante.
 
 ## Cosa fa
 
+- **Colleghi gli account senza terminale.** Una procedura guidata ti porta
+  fino in fondo e lascia l'accesso alla pagina di Google. La password non si
+  digita mai dentro DriveFerry.
 - **Due account affiancati.** Sfogli entrambi i Drive insieme, entri nelle
   cartelle, selezioni più elementi, trascini da un lato all'altro.
 - **Copia che puoi guardare.** Avanzamento, velocità e stima del tempo residuo
@@ -98,39 +101,43 @@ solo.
 
 ## Collega gli account
 
-Ogni account Google diventa un *remote* di rclone. Si fa una volta per account,
-da terminale:
+Premi **Collega un account** dentro l'app. Niente terminale, e nessuna password
+digitata dentro DriveFerry: la pagina che la chiede è quella di Google, aperta
+nel tuo browser.
 
-```bash
-rclone config
-```
+<div align="center">
+<img src="docs/screenshot-connect.png" alt="La procedura guidata, che chiede nome e client ID Google" width="900">
+</div>
 
-Poi rispondi:
+La procedura chiede due cose.
 
-1. `n` per un nuovo remote
-2. un nome corto che riconosci, per esempio `Personale` o `VecchioAccount`
-3. scegli `drive` dall'elenco dei tipi di archiviazione
-4. lascia vuoti `client_id` e `client_secret`, Invio due volte
-5. scegli scope `1` (accesso completo)
-6. lascia vuoti cartella radice e service account
-7. `n` alla configurazione avanzata
-8. `y` per usare il browser: si apre, scegli l'account Google, autorizza
-9. `n` per Shared Drive, a meno che l'account ne usi uno
-10. `y` per confermare, poi `q` per uscire
+**Un nome.** Quello che riconosci nei due selettori: `Personale`, `Lavoro`,
+`Vecchio account`.
 
-Ripeti per il secondo account. Verifica con:
+**Un client ID Google.** Questa è la parte da leggere. rclone include un client
+ID condiviso fra tutti i suoi utenti, ed è rclone stesso a dire:
 
-```bash
-rclone lsd Personale:
-```
+> rclone's shared Google Drive client_id is being retired and will stop working
+> during 2026.
 
-Apri DriveFerry e trovi entrambi gli account nei selettori.
+È anche a numero di richieste limitato per tutti gli utenti rclone del mondo,
+quindi una migrazione grande può rallentare parecchio. Crearne uno tuo è
+gratis, resta tuo e richiede circa dieci minuti:
 
-> Il client OAuth condiviso che rclone usa per impostazione predefinita ha un
-> limite di richieste valido per tutti gli utenti rclone del mondo. Per una
-> migrazione singola va benissimo. Per una libreria grande conviene creare un
-> client ID tuo: sono dieci minuti, la guida di rclone è su
-> [rclone.org/drive/#making-your-own-client-id](https://rclone.org/drive/#making-your-own-client-id).
+1. Apri la [guida di rclone](https://rclone.org/drive/#making-your-own-client-id)
+2. Crea un progetto nella console Google Cloud
+3. Attiva l'API Google Drive per quel progetto
+4. Crea un client OAuth di tipo **Desktop**
+5. Incolla client ID e client secret nella procedura
+
+Poi premi **Apri Google e collega**, scegli l'account nella finestra del browser
+che si apre e autorizza l'accesso. L'app si popola da sola.
+
+Ripeti per il secondo account e li trovi entrambi nei selettori.
+
+> Preferisci il terminale, o vuoi collegare qualcosa che non sia Drive?
+> `rclone config` funziona ancora, e ogni remote creato così compare in
+> DriveFerry.
 
 ## Come funziona un trasferimento
 
@@ -278,4 +285,8 @@ sostenere è rclone.
 
 ## Licenza
 
-MIT. Vedi [LICENSE](LICENSE).
+Apache 2.0. Vedi [LICENSE](LICENSE) e [NOTICE](NOTICE).
+
+Puoi usare, modificare e ridistribuire DriveFerry, anche a scopo commerciale.
+In cambio la licenza chiede che avviso di copyright, licenza e file NOTICE
+viaggino insieme al software, e che tu dichiari cosa hai modificato.

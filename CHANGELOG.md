@@ -6,6 +6,27 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- Connect a Google account from inside the app. A wizard drives rclone's own
+  configuration state machine and hands the sign-in to Google's consent page in
+  the browser, so no terminal and no password inside DriveFerry.
+- The wizard takes your own OAuth client ID, and says why that matters: rclone
+  reports that its shared Google Drive client is being retired during 2026.
+- Forget an account from Settings. It leaves Google Drive untouched.
+
+### Changed
+
+- Licence moved from MIT to Apache 2.0, which adds an explicit patent grant and
+  asks that the NOTICE file and a statement of changes travel with derivatives.
+- The setup documentation no longer walks through `rclone config`, and no longer
+  suggests leaving the client ID empty.
+
+### Fixed
+
+- Cancelling a connection reports a cancellation instead of rclone's internal
+  error, and removes the half-written remote that `config/create` leaves behind.
+
 ## [0.1.0] - 2026-09-06
 
 First public release.

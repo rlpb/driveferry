@@ -305,7 +305,7 @@ function renderSkeleton(side) {
   list.appendChild(wrap);
 }
 
-function renderEmpty(side, title, detail, iconName) {
+function renderEmpty(side, title, detail, iconName, action) {
   const holder = el.panes[side].empty;
   holder.textContent = "";
   holder.appendChild(icon(iconName || "i-folder"));
@@ -315,6 +315,14 @@ function renderEmpty(side, title, detail, iconName) {
   paragraph.textContent = detail;
   holder.appendChild(heading);
   holder.appendChild(paragraph);
+  if (action) {
+    const node = document.createElement("button");
+    node.type = "button";
+    node.className = "btn btn-primary empty-action";
+    node.textContent = action.label;
+    node.addEventListener("click", action.onClick);
+    holder.appendChild(node);
+  }
   holder.hidden = false;
 }
 
@@ -506,7 +514,10 @@ async function loadState() {
       "ok"
     );
     if (!state.remotes.length) {
-      renderEmpty("src", t("empty.noAccounts.title"), t("empty.noAccounts.detail"), "i-cloud");
+      renderEmpty("src", t("empty.noAccounts.title"), t("empty.noAccounts.detail"), "i-cloud", {
+        label: t("account.connect"),
+        onClick: openConnectSheet,
+      });
       renderEmpty("dst", t("empty.noAccounts.title"), t("empty.noAccounts.detail2"), "i-cloud");
       renderGo();
       return;
@@ -857,21 +868,251 @@ function openSettings() {
   );
 
   el.sheetBody.appendChild(group("settings.general", [themeRow, localeRow], "settings.generalHint"));
+
+  const accountRows = state.remotes.map((remote) => {
+    const row = document.createElement("div");
+    row.className = "setting-row";
+    const label = document.createElement("span");
+    label.className = "setting-label";
+    label.textContent = remote.name;
+    const right = document.createElement("span");
+    right.className = "row-actions";
+    const type = document.createElement("span");
+    type.className = "setting-value";
+    type.textContent = remote.type;
+    const forget = document.createElement("button");
+    forget.type = "button";
+    forget.className = "linklike linklike-danger";
+    forget.textContent = t("account.forget");
+    forget.addEventListener("click", () => forgetAccount(remote.name));
+    right.appendChild(type);
+    right.appendChild(forget);
+    row.appendChild(label);
+    row.appendChild(right);
+    return row;
+  });
+  if (!accountRows.length) {
+    const empty = document.createElement("div");
+    empty.className = "setting-row";
+    const label = document.createElement("span");
+    label.className = "setting-value";
+    label.textContent = t("account.none");
+    empty.appendChild(label);
+    accountRows.push(empty);
+  }
+  const accounts = group("settings.accounts", accountRows, "settings.accountsHint");
+  const connect = document.createElement("button");
+  connect.type = "button";
+  connect.className = "btn btn-primary group-action";
+  connect.textContent = t("account.connect");
+  connect.addEventListener("click", openConnectSheet);
+  accounts.appendChild(connect);
+  el.sheetBody.appendChild(accounts);
+
   el.sheetBody.appendChild(
-    group(
-      "settings.about",
-      [
-        valueRow("settings.accounts", String(state.remotes.length)),
-        valueRow("settings.rcloneVersion", state.info.rclone_version || "-"),
-        valueRow("settings.rclonePath", state.info.rclone_binary || "-"),
-      ],
-      "settings.accountsHint"
-    )
+    group("settings.about", [
+      valueRow("settings.rcloneVersion", state.info.rclone_version || "-"),
+      valueRow("settings.rclonePath", state.info.rclone_binary || "-"),
+    ])
   );
   el.sheetFoot.appendChild(button(t("action.done"), "btn-primary", closeSheet));
 }
 
 el.settings.addEventListener("click", openSettings);
+
+/* ---------- connecting an account ---------- */
+
+function textField(id, labelText, placeholder, type) {
+  const wrap = document.createElement("div");
+  wrap.className = "field";
+  const label = document.createElement("label");
+  label.setAttribute("for", id);
+  label.textContent = labelText;
+  const input = document.createElement("input");
+  input.id = id;
+  input.type = type || "text";
+  // autocomplete="off" alone is not enough: the web view matches saved values
+  // by field name, so a name it has never seen is what actually keeps stale
+  // suggestions out of a field like the account name.
+  input.name = id + "-" + Math.random().toString(36).slice(2, 10);
+  input.autocomplete = "off";
+  input.setAttribute("autocapitalize", "off");
+  input.setAttribute("autocorrect", "off");
+  input.spellcheck = false;
+  input.placeholder = placeholder || "";
+  wrap.appendChild(label);
+  wrap.appendChild(input);
+  return { wrap: wrap, input: input };
+}
+
+function openGuide() {
+  const api = window.pywebview && window.pywebview.api;
+  if (api && api.open_guide) api.open_guide();
+  else window.open("https://rclone.org/drive/#making-your-own-client-id", "_blank", "noopener");
+}
+
+/* Kept outside the sheet so switching between the two client-ID choices, which
+   redraws the sheet, does not throw away what has already been typed. */
+const connectDraft = { name: "", clientId: "", clientSecret: "", own: true };
+
+function openConnectSheet() {
+  openSheet(t("account.connectTitle"));
+
+  const name = textField("account-name", t("account.name"), t("account.namePlaceholder"));
+  name.input.value = connectDraft.name;
+  name.input.addEventListener("input", () => {
+    connectDraft.name = name.input.value;
+  });
+  const hint = document.createElement("p");
+  hint.className = "group-hint";
+  hint.textContent = t("account.nameHint");
+  el.sheetBody.appendChild(name.wrap);
+  el.sheetBody.appendChild(hint);
+
+  const picker = settingRow(
+    "account.clientTitle",
+    miniSegmented(
+      [
+        { value: "own", label: t("account.clientOwn") },
+        { value: "shared", label: t("account.clientShared") },
+      ],
+      connectDraft.own ? "own" : "shared",
+      (value) => {
+        connectDraft.own = value === "own";
+        openConnectSheet();
+      }
+    )
+  );
+  picker.classList.add("setting-row-flat");
+  el.sheetBody.appendChild(picker);
+
+  let clientId = null;
+  let clientSecret = null;
+
+  if (connectDraft.own) {
+    el.sheetBody.appendChild(notice("info", "i-alert", t("account.clientWhy")));
+    const steps = document.createElement("p");
+    steps.className = "group-hint";
+    steps.textContent = t("account.clientSteps");
+    el.sheetBody.appendChild(steps);
+
+    const guide = document.createElement("button");
+    guide.type = "button";
+    guide.className = "linklike";
+    guide.textContent = t("account.clientGuide");
+    guide.addEventListener("click", openGuide);
+    el.sheetBody.appendChild(guide);
+
+    clientId = textField("account-client-id", t("account.clientId"), "");
+    clientSecret = textField("account-client-secret", t("account.clientSecret"), "", "password");
+    clientId.input.value = connectDraft.clientId;
+    clientSecret.input.value = connectDraft.clientSecret;
+    clientId.input.addEventListener("input", () => {
+      connectDraft.clientId = clientId.input.value;
+    });
+    clientSecret.input.addEventListener("input", () => {
+      connectDraft.clientSecret = clientSecret.input.value;
+    });
+    el.sheetBody.appendChild(clientId.wrap);
+    el.sheetBody.appendChild(clientSecret.wrap);
+  } else {
+    el.sheetBody.appendChild(notice("warn", "i-alert", t("account.sharedWarning")));
+  }
+
+  el.sheetFoot.appendChild(button(t("action.cancel"), "", closeSheet));
+  el.sheetFoot.appendChild(
+    button(t("account.start"), "btn-primary", async () => {
+      const wanted = connectDraft.name.trim();
+      try {
+        await api("account_connect", {
+          name: wanted,
+          client_id: connectDraft.own ? connectDraft.clientId.trim() : "",
+          client_secret: connectDraft.own ? connectDraft.clientSecret.trim() : "",
+          allow_shared_client: !connectDraft.own,
+        });
+      } catch (error) {
+        toast(error.message, true);
+        return;
+      }
+      connectDraft.name = "";
+      waitForConnection(wanted);
+    })
+  );
+  name.input.focus();
+}
+
+function waitForConnection(accountName) {
+  el.sheetBody.textContent = "";
+  el.sheetFoot.textContent = "";
+  el.sheetClose.disabled = true;
+
+  const waiting = notice("info", "i-cloud", t("account.waitingDetail"));
+  const heading = document.createElement("h3");
+  heading.className = "group-title";
+  heading.textContent = t("account.waiting");
+  el.sheetBody.appendChild(heading);
+  el.sheetBody.appendChild(waiting);
+
+  const cancel = button(t("action.cancel"), "", async () => {
+    cancel.disabled = true;
+    await api("account_cancel", {}).catch(() => {});
+  });
+  el.sheetFoot.appendChild(cancel);
+
+  const poll = async () => {
+    let status;
+    try {
+      status = await api("account_status", {});
+    } catch (error) {
+      status = { stage: "error", error: error.message };
+    }
+    if (status.stage === "starting" || status.stage === "browser") {
+      setTimeout(poll, 1200);
+      return;
+    }
+    el.sheetClose.disabled = false;
+    cancel.remove();
+    waiting.remove();
+    heading.remove();
+    if (status.stage === "done") {
+      el.sheetBody.appendChild(notice("ok", "i-check", t("account.done", { name: accountName })));
+      el.sheetFoot.appendChild(button(t("action.done"), "btn-primary", closeSheet));
+      loadState();
+    } else if (status.stage === "cancelled") {
+      closeSheet();
+    } else {
+      el.sheetBody.appendChild(
+        notice("danger", "i-alert", t("account.failed", { error: status.error || "" }))
+      );
+      el.sheetFoot.appendChild(button(t("action.close"), "", closeSheet));
+    }
+  };
+  poll();
+}
+
+async function forgetAccount(accountName) {
+  openSheet(t("account.forget"));
+  el.sheetBody.appendChild(notice("danger", "i-alert", t("account.forgetConfirm", { name: accountName })));
+  el.sheetFoot.appendChild(button(t("action.cancel"), "", closeSheet));
+  el.sheetFoot.appendChild(
+    button(t("account.forget"), "btn-danger", async () => {
+      try {
+        await api("account_forget", { name: accountName, confirm: "FORGET" });
+        toast(t("account.forgotten", { name: accountName }));
+        closeSheet();
+        Object.keys(el.panes).forEach((side) => {
+          if (state.panes[side].remote === accountName) {
+            state.panes[side].remote = null;
+            state.panes[side].path = "";
+          }
+        });
+        loadState();
+      } catch (error) {
+        toast(error.message, true);
+      }
+    })
+  );
+}
 
 /* ---------- new folder ---------- */
 

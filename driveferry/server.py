@@ -24,6 +24,7 @@ from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
+from .accounts import AccountSetup
 from .rclone import RcloneError
 
 WEB_ROOT = Path(__file__).parent / "web"
@@ -96,6 +97,7 @@ class Api:
         self.prefs_path = Path(prefs_path) if prefs_path else None
         self._remotes_cache = None
         self.prefs = self._load_prefs()
+        self.setup = AccountSetup(daemon)
 
     # -- preferences -------------------------------------------------------
 
@@ -387,8 +389,48 @@ class Api:
                 failed.append({"name": name, "error": str(exc)})
         return {"deleted": deleted, "failed": failed}
 
+    # -- connecting an account --------------------------------------------
+
+    def op_account_connect(self, payload):
+        """Start rclone's Drive setup. Google's consent page opens in the
+        browser, which is where a password belongs; nothing is typed here."""
+        try:
+            self.setup.start(
+                payload.get("name") or "",
+                client_id=payload.get("client_id") or "",
+                client_secret=payload.get("client_secret") or "",
+                allow_shared_client=bool(payload.get("allow_shared_client")),
+            )
+        except ValueError as exc:
+            raise ApiError(str(exc)) from exc
+        return self.setup.status()
+
+    def op_account_status(self, payload):
+        status = self.setup.status()
+        if status.get("stage") == "done":
+            self.remotes(refresh=True)
+        return status
+
+    def op_account_cancel(self, payload):
+        return self.setup.cancel()
+
+    def op_account_forget(self, payload):
+        """Remove an account from rclone's config. The data in Drive is untouched."""
+        if payload.get("confirm") != "FORGET":
+            raise ApiError("forgetting an account requires an explicit confirmation")
+        name = payload.get("name")
+        if name not in {entry["name"] for entry in self.remotes(refresh=True)}:
+            raise ApiError("unknown account: {}".format(name), HTTPStatus.NOT_FOUND)
+        self.daemon.call("config/delete", {"name": name})
+        self.remotes(refresh=True)
+        return {"forgotten": name}
+
     OPERATIONS = {
         "state": op_state,
+        "account_connect": op_account_connect,
+        "account_status": op_account_status,
+        "account_cancel": op_account_cancel,
+        "account_forget": op_account_forget,
         "list": op_list,
         "about": op_about,
         "mkdir": op_mkdir,

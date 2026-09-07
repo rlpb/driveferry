@@ -33,8 +33,11 @@ from pathlib import Path
 #: :meth:`RcloneDaemon.check_supported`, so a missing method fails loudly at
 #: startup instead of silently at the moment a user presses "Copy".
 REQUIRED_RC_METHODS = (
+    "config/create",
+    "config/delete",
     "config/listremotes",
     "config/dump",
+    "config/oauthstop",
     "core/stats",
     "core/version",
     "job/status",

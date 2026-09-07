@@ -910,3 +910,33 @@ body.is-web .tb-controls, body.is-web .tb-lights { display: none; }
     transition-duration: 0.001ms !important;
   }
 }
+
+/* ============================================================
+   Account wizard
+   ============================================================ */
+
+.empty-action { flex: none; margin-top: 6px; padding: 9px 18px; font-size: 13px; }
+
+/* A link that must not navigate the app window away: it is a button, and the
+   Python side opens the one page it is allowed to open. */
+.linklike {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--blue);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 4px 0;
+  margin: 0 0 10px;
+  text-align: left;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.linklike:hover { color: var(--blue-hover); }
+.linklike-danger { color: var(--red); margin: 0; padding: 4px 6px; text-decoration: none; }
+.linklike-danger:hover { color: var(--red-hover); text-decoration: underline; }
+
+.setting-row-flat { background: var(--fill-3); border-radius: var(--radius-m); margin-bottom: 14px; }
+.row-actions { display: flex; align-items: center; gap: 12px; }
+.group-action { width: 100%; margin-top: 10px; padding: 10px 16px; font-size: 13px; }

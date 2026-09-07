@@ -9,7 +9,7 @@ A native desktop app on top of rclone, for the one thing Google Drive still cann
 
 [![CI](https://github.com/rlpb/driveferry/actions/workflows/ci.yml/badge.svg)](https://github.com/rlpb/driveferry/actions/workflows/ci.yml)
 [![Latest release](https://img.shields.io/github/v/release/rlpb/driveferry?display_name=tag&sort=semver)](https://github.com/rlpb/driveferry/releases/latest)
-[![License: MIT](https://img.shields.io/badge/license-MIT-black.svg)](LICENSE)
+[![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-black.svg)](LICENSE)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue.svg)](pyproject.toml)
 [![Platforms](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)](#download)
 
@@ -40,6 +40,9 @@ what to move, and you press one button.
 
 ## Features
 
+- **Connect accounts without a terminal.** A wizard walks you through it and
+  hands the sign-in to Google's own page. Your password is never typed into
+  DriveFerry.
 - **Two accounts, side by side.** Browse both Drives at once, navigate folders,
   select several items, drag from one side to the other.
 - **Copy that you can watch.** Live progress, speed and ETA, straight from
@@ -99,40 +102,42 @@ and the first run sets everything up.
 
 ## Connect your accounts
 
-Each Google account becomes one rclone *remote*. Do this once per account, in a
-terminal:
+Press **Connect an account** in the app. No terminal, and no password typed
+into DriveFerry: the consent page that asks for it is Google's own, opened in
+your browser.
 
-```bash
-rclone config
-```
+<div align="center">
+<img src="docs/screenshot-connect.png" alt="The connect wizard, asking for a name and a Google client ID" width="900">
+</div>
 
-Then answer:
+The wizard asks for two things.
 
-1. `n` for a new remote
-2. a short name you will recognise, for example `Personal` or `OldAccount`
-3. choose `drive` from the list of storage types
-4. leave `client_id` and `client_secret` empty for now, press Enter twice
-5. choose scope `1` (full access)
-6. leave the root folder and service account file empty
-7. `n` when it asks about advanced config
-8. `y` to use the browser: your browser opens, pick the Google account, allow
-   access
-9. `n` for Shared Drive, unless this account uses one
-10. `y` to confirm, then `q` to quit
+**A name.** Anything you will recognise in the two pickers: `Personal`,
+`Work`, `Old account`.
 
-Repeat for the second account. Check them with:
+**A Google client ID.** This is the part worth reading. rclone ships a shared
+client ID that any rclone user can use, and rclone itself now says it:
 
-```bash
-rclone lsd Personal:
-```
+> rclone's shared Google Drive client_id is being retired and will stop working
+> during 2026.
 
-Open DriveFerry and both accounts appear in the pickers.
+It is also rate limited across every rclone user in the world, so a large
+migration through it can crawl. Making your own is free, stays yours, and takes
+about ten minutes:
 
-> Google's shared OAuth client, which rclone uses by default, is rate limited
-> across all rclone users worldwide. For a one-off migration it is fine. For a
-> large library, create your own client ID: it takes ten minutes and rclone's
-> guide walks through it at
-> [rclone.org/drive/#making-your-own-client-id](https://rclone.org/drive/#making-your-own-client-id).
+1. Open [rclone's guide](https://rclone.org/drive/#making-your-own-client-id)
+2. Create a project in the Google Cloud console
+3. Enable the Google Drive API for it
+4. Create an OAuth client of type **Desktop**
+5. Paste the client ID and client secret into the wizard
+
+Then press **Open Google and connect**, pick the account in the browser window
+that opens, and allow access. The app fills in by itself.
+
+Repeat for the second account, and both appear in the pickers.
+
+> Prefer the terminal, or connecting something other than Drive? `rclone config`
+> still works, and every remote it creates shows up in DriveFerry.
 
 ## How a transfer works
 
@@ -278,7 +283,11 @@ tool is useful to you, rclone is the project to thank and to support.
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
+Apache 2.0. See [LICENSE](LICENSE) and [NOTICE](NOTICE).
+
+You can use, change and redistribute DriveFerry, including commercially.
+What the licence asks in return is that the copyright notice, the licence
+and the NOTICE file travel with it, and that you say what you changed.
 
 ---
 

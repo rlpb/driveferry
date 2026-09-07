@@ -38,71 +38,6 @@ def test_list_sorts_folders_first_then_case_insensitively():
     assert names == ["Alpha", "beta", "apple.txt", "zebra.txt"]
 
 
-def test_transfer_uses_sync_copy_for_folders_and_copyfile_for_files():
-    api, daemon = make_api()
-    result = api.op_transfer(
-        {
-            "src_remote": "alpha",
-            "src_path": "Photos",
-            "dst_remote": "beta",
-            "dst_path": "Backup",
-            "names": ["2024", "note.txt"],
-            "dirs": ["2024"],
-        }
-    )
-    transfers = [call for call in daemon.calls if call[0] in ("sync/copy", "operations/copyfile")]
-    assert [call[0] for call in transfers] == ["sync/copy", "operations/copyfile"]
-
-    folder = transfers[0][1]
-    assert folder["srcFs"] == "alpha:Photos/2024"
-    assert folder["dstFs"] == "beta:Backup/2024"
-
-    single = transfers[1][1]
-    assert single["srcFs"] == "alpha:Photos"
-    assert single["srcRemote"] == "note.txt"
-    assert single["dstFs"] == "beta:Backup"
-    assert single["dstRemote"] == "note.txt"
-
-    assert all(call[1]["_async"] is True for call in transfers)
-    assert len({call[1]["_group"] for call in transfers}) == 1
-    assert result["group"].startswith("df-")
-    assert [job["jobid"] for job in result["jobs"]] == [1, 2]
-
-
-def test_transfer_passes_dry_run_and_server_side_flags():
-    api, daemon = make_api()
-    api.op_transfer(
-        {
-            "src_remote": "alpha",
-            "src_path": "",
-            "dst_remote": "beta",
-            "dst_path": "",
-            "names": ["a.txt"],
-            "dirs": [],
-            "dry_run": True,
-            "server_side": True,
-        }
-    )
-    options = daemon.calls[-1][1]["_config"]
-    # Key names verified against `options/get` on rclone v1.75.1.
-    assert options == {"DryRun": True, "ServerSideAcrossConfigs": True}
-
-
-def test_transfer_defaults_to_writing_for_real_but_without_server_side():
-    api, daemon = make_api()
-    api.op_transfer(
-        {
-            "src_remote": "alpha",
-            "src_path": "",
-            "dst_remote": "beta",
-            "dst_path": "",
-            "names": ["a.txt"],
-            "dirs": [],
-        }
-    )
-    assert daemon.calls[-1][1]["_config"] == {"DryRun": False}
-
-
 @pytest.mark.parametrize("names", [[], ["../etc"], ["a/b"], ["."], [""], ["a\\b"], [None]])
 def test_transfer_rejects_bad_selections(names):
     api, _ = make_api()
@@ -288,9 +223,3 @@ def test_a_corrupt_settings_file_falls_back_to_defaults(tmp_path):
     path.write_text("{not json", encoding="utf-8")
     prefs = Api(FakeDaemon(), prefs_path=path).prefs
     assert prefs["theme"] == "system" and prefs["locale"] == "system"
-
-
-def test_transfer_status_rejects_a_foreign_group():
-    api, _ = make_api()
-    with pytest.raises(ApiError):
-        api.op_transfer_status({"group": "not-ours", "jobs": [1]})

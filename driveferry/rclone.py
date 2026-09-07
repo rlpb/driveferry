@@ -182,7 +182,18 @@ class RcloneDaemon:
     def start(self, timeout=STARTUP_TIMEOUT):
         if self.process and self.process.poll() is None:
             return self
-        args = [self.binary, "rcd", "--rc-addr", "127.0.0.1:{}".format(self.port)]
+        args = [
+            self.binary,
+            "rcd",
+            "--rc-addr",
+            "127.0.0.1:{}".format(self.port),
+            # rclone forgets a finished job after a minute by default, and then
+            # answers "job not found" to anything still asking about it. A
+            # transfer that takes an hour would lose the outcome of its first
+            # items, so jobs are kept for the life of the session instead.
+            "--rc-job-expire-duration",
+            "24h",
+        ]
         if self.config_path:
             args += ["--config", str(self.config_path)]
         env = dict(os.environ)

@@ -68,17 +68,18 @@ def call(live, operation, payload=None):
 
 
 def wait_for(live, started, timeout=60):
+    """The run reports one stage; anything settled ends the wait."""
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
-        status = call(
-            live,
-            "transfer_status",
-            {"group": started["group"], "jobs": [job["jobid"] for job in started["jobs"]]},
-        )
-        if status["finished"]:
+        status = call(live, "transfer_status")
+        if status["stage"] in ("done", "failed", "cancelled"):
             return status
         time.sleep(0.2)
     raise AssertionError("transfer did not finish within {}s".format(timeout))
+
+
+def failures(status):
+    return [item for item in status["items"] if item["state"] == "failed"]
 
 
 def test_the_required_rc_methods_exist_in_this_rclone(live):
@@ -125,7 +126,7 @@ def test_dry_run_writes_nothing(live):
         },
     )
     status = wait_for(live, started)
-    assert status["failed"] == []
+    assert failures(status) == []
     assert not (live["dst"] / "dry").exists()
 
 
@@ -143,7 +144,7 @@ def test_copy_then_verify_then_delete(live):
         },
     )
     status = wait_for(live, started)
-    assert status["failed"] == []
+    assert failures(status) == []
 
     # every file landed, with its nesting intact
     assert (live["dst"] / "Photos" / "2024" / "party.png").is_file()

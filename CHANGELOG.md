@@ -6,6 +6,36 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-09-07
+
+The transfer engine was rebuilt after watching a 4 GB job on two real Google
+accounts. All four problems had the same root: one rclone job per selected
+item.
+
+### Changed
+
+- **Items are transferred one at a time.** Five items meant five jobs with four
+  transfers each, so twenty parallel uploads: Google throttled them, the speed
+  swung between 520 kB/s and 1.3 MB/s, and cancelling had twenty things to
+  stop. Cancelling now stops one.
+- **The job is sized before the bar is drawn against it.** Each job used to
+  discover its own tree while running, so the total grew underneath: the same
+  187 MB read as 65% of 287 MB and then 3.7% of 5.0 GB. The scan runs alongside
+  the first copy, so nothing waits for it, and once it lands the denominator
+  never moves again.
+- The estimated time left is computed from the real remaining bytes instead of
+  rclone's own guess, which was based on the same moving total.
+
+### Fixed
+
+- `job not found` during long transfers. rclone forgets a finished job after a
+  minute, and the app kept asking about jobs that had completed early. The
+  daemon now keeps them for the session, and a job that has gone missing counts
+  as finished rather than as a failure.
+- The forward-only progress bar added in 0.4.1 is gone. It hid the lurching by
+  making the bar disagree with the numbers printed next to it; with a fixed
+  total there is nothing to hide.
+
 ## [0.5.0] - 2026-09-07
 
 ### Added
@@ -135,7 +165,8 @@ First public release.
 - Account secrets never leave the Python process; the UI only receives a remote
   name and its backend type.
 
-[Unreleased]: https://github.com/rlpb/driveferry/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/rlpb/driveferry/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/rlpb/driveferry/releases/tag/v0.6.0
 [0.5.0]: https://github.com/rlpb/driveferry/releases/tag/v0.5.0
 [0.4.1]: https://github.com/rlpb/driveferry/releases/tag/v0.4.1
 [0.4.0]: https://github.com/rlpb/driveferry/releases/tag/v0.4.0

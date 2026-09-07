@@ -27,6 +27,7 @@ from pathlib import Path
 
 from .accounts import AccountSetup
 from .rclone import RcloneError
+from .transfers import TransferRun
 
 WEB_ROOT = Path(__file__).parent / "web"
 
@@ -115,6 +116,7 @@ class Api:
         self._remotes_cache = None
         self.prefs = self._load_prefs()
         self.setup = AccountSetup(daemon)
+        self.transfer = TransferRun(daemon)
 
     # -- preferences -------------------------------------------------------
 
@@ -259,109 +261,28 @@ class Api:
         return {"ok": True}
 
     def op_transfer(self, payload):
-        """Start one rclone job per selected item, under a shared stats group."""
+        """Start one transfer. It measures first, then moves item by item."""
         names = self._names(payload)
-        src_path = _clean_path(payload.get("src_path"))
-        dst_path = _clean_path(payload.get("dst_path"))
-        src_remote = payload.get("src_remote")
-        dst_remote = payload.get("dst_remote")
-        options = self._transfer_config(payload)
-        group = "df-" + secrets.token_hex(6)
-
-        jobs = []
         dirs = set(payload.get("dirs") or [])
-        for name in names:
-            is_dir = name in dirs
-            if is_dir:
-                request = {
-                    "srcFs": self._fs(src_remote, _join(src_path, name)),
-                    "dstFs": self._fs(dst_remote, _join(dst_path, name)),
-                }
-                method = "sync/copy"
-            else:
-                request = {
-                    "srcFs": self._fs(src_remote, src_path),
-                    "srcRemote": name,
-                    "dstFs": self._fs(dst_remote, dst_path),
-                    "dstRemote": name,
-                }
-                method = "operations/copyfile"
-            request.update({"_async": True, "_group": group, "_config": options})
-            result = self.daemon.call(method, request)
-            jobs.append({"jobid": result["jobid"], "name": name, "is_dir": is_dir})
-
-        return {
-            "group": group,
-            "jobs": jobs,
+        plan = {
+            "src_fs": self._fs(payload.get("src_remote"), payload.get("src_path")),
+            "dst_fs": self._fs(payload.get("dst_remote"), payload.get("dst_path")),
+            "names": names,
+            "dirs": dirs,
             "dry_run": bool(payload.get("dry_run")),
             "server_side": bool(payload.get("server_side")),
+            "options": self._transfer_config(payload),
         }
+        try:
+            return self.transfer.start(plan)
+        except ValueError as exc:
+            raise ApiError(str(exc)) from exc
 
     def op_transfer_status(self, payload):
-        group = payload.get("group")
-        if not isinstance(group, str) or not group.startswith("df-"):
-            raise ApiError("invalid transfer group")
-        jobs = payload.get("jobs") or []
-        statuses = []
-        for jobid in jobs:
-            if not isinstance(jobid, int):
-                raise ApiError("invalid job id")
-            status = self.daemon.call("job/status", {"jobid": jobid})
-            statuses.append(
-                {
-                    "jobid": jobid,
-                    "finished": bool(status.get("finished")),
-                    "success": bool(status.get("success")),
-                    "error": status.get("error") or "",
-                    "duration": status.get("duration"),
-                }
-            )
-        try:
-            stats = self.daemon.call("core/stats", {"group": group})
-        except RcloneError:
-            stats = {}
-        return {
-            "jobs": statuses,
-            "finished": all(entry["finished"] for entry in statuses) if statuses else True,
-            "failed": [entry for entry in statuses if entry["finished"] and not entry["success"]],
-            "stats": {
-                "bytes": stats.get("bytes", 0),
-                "total_bytes": stats.get("totalBytes", 0),
-                "speed": stats.get("speed", 0),
-                "eta": stats.get("eta"),
-                "errors": stats.get("errors", 0),
-                "transfers": stats.get("transfers", 0),
-                "total_transfers": stats.get("totalTransfers", 0),
-                # Before any byte moves, rclone is listing and comparing. These
-                # two are the only sign of life during that stretch, which on a
-                # real Drive can last a while.
-                "listed": stats.get("listed", 0),
-                "checks": stats.get("checks", 0),
-                "server_side_copies": stats.get("serverSideCopies", 0),
-                "transferring": [
-                    {
-                        "name": item.get("name"),
-                        "bytes": item.get("bytes", 0),
-                        "size": item.get("size", 0),
-                        "speed": item.get("speed", 0),
-                        "percentage": item.get("percentage", 0),
-                    }
-                    for item in (stats.get("transferring") or [])
-                ],
-            },
-        }
+        return self.transfer.status()
 
     def op_transfer_cancel(self, payload):
-        stopped = []
-        for jobid in payload.get("jobs") or []:
-            if not isinstance(jobid, int):
-                raise ApiError("invalid job id")
-            try:
-                self.daemon.call("job/stop", {"jobid": jobid})
-                stopped.append(jobid)
-            except RcloneError:
-                pass  # already finished
-        return {"stopped": stopped}
+        return self.transfer.cancel()
 
     def op_verify(self, payload):
         """Compare file count and byte total for each transferred item.

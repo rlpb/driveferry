@@ -1341,9 +1341,8 @@ async function startTransfer(context, isMove, dryRun, serverSide) {
   const speedLabel = progress.querySelector(".progress-speed");
   const etaLabel = progress.querySelector(".progress-eta");
 
-  let started;
   try {
-    started = await api("transfer", {
+    await api("transfer", {
       src_remote: context.from.remote,
       src_path: context.from.path,
       dst_remote: context.to.remote,
@@ -1360,94 +1359,98 @@ async function startTransfer(context, isMove, dryRun, serverSide) {
     return;
   }
 
-  const jobIds = started.jobs.map((job) => job.jobid);
-  const byJob = new Map(started.jobs.map((job) => [job.jobid, job.name]));
   setStatusKey("status.transferring", {}, "busy");
-
-  /* rclone keeps discovering files while it transfers, so total_bytes grows and
-     a plain bytes/total would step backwards. The bar only ever moves forward:
-     when the total grows it pauses instead of retreating. */
-  let shown = 0;
 
   const cancel = button(t("btn.cancelTransfer"), "btn-quiet-danger", async () => {
     cancel.disabled = true;
-    await api("transfer_cancel", { jobs: jobIds }).catch(() => {});
-    toast(t("toast.cancelling"));
+    cancel.textContent = t("toast.cancelling");
+    await api("transfer_cancel", {}).catch(() => {});
   });
   el.sheetFoot.appendChild(cancel);
+
+  const ITEM_LABELS = {
+    waiting: "item.waiting",
+    running: "item.transferring",
+    done: "item.done",
+    failed: "item.failed",
+    cancelled: "item.cancelledItem",
+  };
 
   const poll = async () => {
     let status;
     try {
-      status = await api("transfer_status", { group: started.group, jobs: jobIds });
+      status = await api("transfer_status", {});
     } catch (error) {
       el.sheetBody.appendChild(notice("danger", "i-alert", error.message));
       el.sheetClose.disabled = false;
       return;
     }
 
-    const stats = status.stats;
-    /* Until rclone has finished listing and comparing, total_bytes is zero and
-       a percentage bar would sit at 0 looking broken. Show a moving stripe and
-       say what it is doing instead. */
-    const preparing = !status.finished && !stats.total_bytes;
-    progress.classList.toggle("is-preparing", preparing);
-    if (preparing) {
-      doneLabel.textContent = t("progress.preparing", { n: stats.listed || 0 });
+    const stats = status.stats || {};
+    /* The whole job is sized before anything moves, so once measuring is over
+       the denominator never changes and the bar cannot lurch. */
+    const measuring = status.stage === "measuring" || !status.total_bytes;
+    progress.classList.toggle("is-preparing", measuring);
+    if (measuring) {
+      doneLabel.textContent = t("progress.preparing", { size: formatBytes(status.measured || 0) });
       speedLabel.textContent = "";
       etaLabel.textContent = "";
     } else {
-      const ratio = stats.total_bytes
-        ? Math.min(1, stats.bytes / stats.total_bytes)
-        : status.finished
-          ? 1
-          : 0;
-      shown = status.finished ? 1 : Math.max(shown, ratio);
-      fill.setAttribute("width", String((shown * 100).toFixed(2)));
+      const moved = stats.bytes || 0;
+      const ratio = status.total_bytes ? Math.min(1, moved / status.total_bytes) : 0;
+      fill.setAttribute("width", String((ratio * 100).toFixed(2)));
       doneLabel.textContent = t("progress.of", {
-        done: formatBytes(stats.bytes),
-        total: formatBytes(stats.total_bytes),
+        done: formatBytes(moved),
+        total: formatBytes(status.total_bytes),
       });
       speedLabel.textContent = formatSpeed(stats.speed);
-      etaLabel.textContent = t("progress.eta", { eta: formatEta(stats.eta) });
+      const remaining = Math.max(0, (status.total_bytes || 0) - moved);
+      etaLabel.textContent = t("progress.eta", {
+        eta: stats.speed > 0 ? formatEta(remaining / stats.speed) : "-",
+      });
     }
 
-    status.jobs.forEach((job) => {
-      const item = el.sheetBody.querySelector('.item[data-name="' + CSS.escape(byJob.get(job.jobid)) + '"]');
+    (status.items || []).forEach((entry) => {
+      const item = el.sheetBody.querySelector('.item[data-name="' + CSS.escape(entry.name) + '"]');
       if (!item) return;
       const label = item.querySelector(".item-state");
-      if (!job.finished) {
-        label.textContent = t("item.transferring");
-      } else if (job.success) {
-        item.classList.add("is-ok");
-        label.textContent = t("item.done");
-      } else {
-        item.classList.add("is-failed");
-        label.textContent = t("item.failed");
-        item.title = job.error;
-      }
+      label.textContent = t(ITEM_LABELS[entry.state] || "item.waiting");
+      item.classList.toggle("is-ok", entry.state === "done");
+      item.classList.toggle("is-failed", entry.state === "failed");
+      if (entry.error) item.title = entry.error;
     });
 
-    if (!status.finished) {
+    const settled = ["done", "failed", "cancelled"].includes(status.stage);
+    if (!settled) {
       setTimeout(poll, POLL_MS);
       return;
     }
 
     cancel.remove();
     el.sheetClose.disabled = false;
-    fill.classList.toggle("is-done", status.failed.length === 0);
-    fill.classList.toggle("is-failed", status.failed.length > 0);
+    const failures = (status.items || []).filter((entry) => entry.state === "failed");
+    fill.classList.toggle("is-done", status.stage === "done");
+    fill.classList.toggle("is-failed", failures.length > 0);
     setStatusKey("status.idle", {}, "ok");
     refreshPane(context.toSide);
 
-    if (status.failed.length) {
+    if (status.stage === "cancelled") {
+      el.sheetFoot.appendChild(button(t("action.close"), "", closeSheet));
+      return;
+    }
+
+    if (failures.length || status.error) {
       el.sheetBody.appendChild(
-        notice("danger", "i-alert", t("notice.failed", { n: status.failed.length, error: status.failed[0].error }))
+        notice("danger", "i-alert", t("notice.failed", {
+          n: failures.length || 1,
+          error: (failures[0] && failures[0].error) || status.error,
+        }))
       );
       /* Google answers a cross-account server-side copy with a 404 on the
          source file, because the request carries the destination account's
          credentials and that account cannot see it. Offer the way out. */
-      const refused = serverSide && /notFound|404/i.test(status.failed[0].error || "");
+      const firstError = (failures[0] && failures[0].error) || status.error || "";
+      const refused = serverSide && /notFound|404/i.test(firstError);
       if (refused) {
         el.sheetBody.appendChild(notice("warn", "i-cloud", t("notice.serverSideFailed")));
         el.sheetFoot.appendChild(

@@ -276,6 +276,15 @@ python -m driveferry --browser --verbose
 La CI esegue la suite su Linux, macOS e Windows, installa rclone su ogni runner
 e fallisce se i test end-to-end si auto-saltano.
 
+## Sostieni il progetto
+
+DriveFerry non trasporta nemmeno un byte. Lo fa [rclone](https://rclone.org/donate/),
+ed è quello il progetto da sostenere per primo.
+
+Se questo strumento ti ha risparmiato un pomeriggio e vuoi dire grazie lo
+stesso, c'è un [Ko-fi](https://ko-fi.com/rlpb_). Qui niente è a pagamento, e
+niente lo sarà mai.
+
 ## Crediti
 
 DriveFerry è una faccia per [rclone](https://rclone.org), che fa la parte

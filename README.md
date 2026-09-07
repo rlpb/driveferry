@@ -275,6 +275,15 @@ and fails if the end-to-end tests skip themselves.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request.
 
+## Support
+
+DriveFerry carries none of your bytes. [rclone](https://rclone.org/donate/)
+does, and it is the project to support first.
+
+If this tool saved you an afternoon and you want to say thanks anyway, there is
+a [Ko-fi](https://ko-fi.com/rlpb_). Nothing here is paywalled, and nothing ever
+will be.
+
 ## Credits
 
 DriveFerry is a face for [rclone](https://rclone.org), which does the hard part:

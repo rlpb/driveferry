@@ -279,7 +279,8 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request.
 
 DriveFerry is a face for [rclone](https://rclone.org), which does the hard part:
 OAuth, resumable transfers, checksums, retries and server-side copy. If this
-tool is useful to you, rclone is the project to thank and to support.
+tool is useful to you, [support rclone](https://rclone.org/donate/) first. It
+carries every byte you move.
 
 ## License
 

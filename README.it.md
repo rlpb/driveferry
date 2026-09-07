@@ -280,8 +280,9 @@ e fallisce se i test end-to-end si auto-saltano.
 
 DriveFerry è una faccia per [rclone](https://rclone.org), che fa la parte
 difficile: OAuth, trasferimenti riprendibili, checksum, tentativi ripetuti e
-copia lato server. Se questo strumento ti è utile, il progetto da ringraziare e
-sostenere è rclone.
+copia lato server. Se questo strumento ti è utile,
+[sostieni rclone](https://rclone.org/donate/) per primo: è lui a trasportare
+ogni byte che sposti.
 
 ## Licenza
 

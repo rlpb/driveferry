@@ -85,6 +85,17 @@ def test_the_required_rc_methods_exist_in_this_rclone(live):
     assert live["daemon"].check_supported() == []
 
 
+def test_optional_methods_are_not_treated_as_required(live):
+    """`config/oauthstop` is missing from older distribution packages of rclone.
+
+    It only makes cancelling an unfinished sign-in tidier, so it must never be
+    the reason the app refuses to start.
+    """
+    from driveferry.rclone import OPTIONAL_RC_METHODS, REQUIRED_RC_METHODS
+
+    assert set(OPTIONAL_RC_METHODS).isdisjoint(REQUIRED_RC_METHODS)
+
+
 def test_state_lists_both_accounts(live):
     state = call(live, "state")
     assert {remote["name"] for remote in state["remotes"]} == {"accountA", "accountB"}

@@ -32,12 +32,18 @@ from pathlib import Path
 #: rc methods DriveFerry calls. Checked against the live daemon by
 #: :meth:`RcloneDaemon.check_supported`, so a missing method fails loudly at
 #: startup instead of silently at the moment a user presses "Copy".
+#: Methods that make things tidier but that the app works without. Older
+#: distribution packages of rclone lack `config/oauthstop`, and refusing to
+#: start over a call that only makes cancelling an unfinished sign-in neater
+#: would be the wrong trade: the account wizard runs fine without it, and the
+#: half-made remote is removed by `config/delete` either way.
+OPTIONAL_RC_METHODS = ("config/oauthstop",)
+
 REQUIRED_RC_METHODS = (
     "config/create",
     "config/delete",
     "config/listremotes",
     "config/dump",
-    "config/oauthstop",
     "core/stats",
     "core/version",
     "job/status",

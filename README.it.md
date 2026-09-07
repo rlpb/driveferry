@@ -49,6 +49,10 @@ spostare e premi un pulsante.
 - **Spostamento che non può mangiarti i dati.** Lo spostamento è in tre passi:
   copia, verifica che ogni file sia arrivato, e solo dopo cancella gli
   originali, con una conferma separata che devi premere tu.
+- **Confronto, quando vuoi.** Seleziona gli stessi nomi sui due lati e premi
+  Confronta: numero di file e byte totali, affiancati, in sola lettura. La
+  risposta a "è arrivato davvero tutto" senza aprire Drive nel browser e
+  contare a occhio.
 - **Verifica prima della cancellazione.** Numero di file e byte totali
   confrontati sui due lati. Se non coincidono, la cancellazione non viene
   offerta.

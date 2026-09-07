@@ -91,6 +91,7 @@ const el = {
   goCount: document.getElementById("go-count"),
   hint: document.getElementById("transfer-hint"),
   swap: document.getElementById("swap"),
+  compare: document.getElementById("compare"),
   statusDot: document.getElementById("status-dot"),
   statusText: document.getElementById("status-text"),
   scrim: document.getElementById("scrim"),
@@ -428,6 +429,7 @@ function renderGo() {
   const pane = state.panes[state.active];
   const count = pane.selected.size;
   el.go.disabled = count === 0 || !state.panes[other(state.active)].remote;
+  el.compare.disabled = el.go.disabled;
   el.goCount.textContent = String(count);
   el.go.classList.toggle("is-move", state.mode === "move");
   el.go.classList.toggle("is-reversed", state.active === "dst");
@@ -1543,6 +1545,79 @@ async function runVerification(context, isMove) {
   );
 }
 
+/* ---------- comparing without transferring ---------- */
+
+async function openCompareSheet() {
+  const context = selectionContext();
+  if (!context.names.length || !context.to.remote) return;
+
+  openSheet(t("compare.title", { n: context.names.length }));
+  el.sheetBody.appendChild(routeSummary(context.fromSide, context.toSide));
+  const hint = document.createElement("p");
+  hint.className = "group-hint";
+  hint.textContent = t("compare.hint");
+  el.sheetBody.appendChild(hint);
+  const pending = notice("info", "i-refresh", t("compare.checking"));
+  el.sheetBody.appendChild(pending);
+  el.sheetClose.disabled = true;
+
+  let result;
+  try {
+    result = await api("verify", {
+      src_remote: context.from.remote,
+      src_path: context.from.path,
+      dst_remote: context.to.remote,
+      dst_path: context.to.path,
+      names: context.names,
+      dirs: Array.from(context.dirs),
+    });
+  } catch (error) {
+    el.sheetClose.disabled = false;
+    pending.remove();
+    el.sheetBody.appendChild(notice("danger", "i-alert", error.message));
+    el.sheetFoot.appendChild(button(t("action.close"), "", closeSheet));
+    return;
+  }
+
+  el.sheetClose.disabled = false;
+  pending.remove();
+
+  const list = document.createElement("ul");
+  list.className = "itemlist";
+  result.results.forEach((entry) => {
+    const item = document.createElement("li");
+    item.className = "item " + (entry.ok ? "is-ok" : "is-failed");
+    item.appendChild(icon(context.dirs.has(entry.name) ? "i-folder" : "i-file"));
+    const label = document.createElement("span");
+    label.className = "item-name";
+    label.textContent = entry.name;
+    const detail = document.createElement("span");
+    detail.className = "item-state";
+    if (!entry.src || !entry.dst) {
+      detail.textContent = t("compare.absent");
+    } else {
+      detail.textContent = t("compare.sideBySide", {
+        srcCount: entry.src.count,
+        srcSize: formatBytes(entry.src.bytes),
+        dstCount: entry.dst.count,
+        dstSize: formatBytes(entry.dst.bytes),
+        n: entry.src.count,
+        count: entry.dst.count,
+      });
+    }
+    item.appendChild(label);
+    item.appendChild(detail);
+    list.appendChild(item);
+  });
+  el.sheetBody.appendChild(list);
+  el.sheetBody.appendChild(
+    result.ok
+      ? notice("ok", "i-check", t("compare.same"))
+      : notice("danger", "i-alert", t("compare.differs"))
+  );
+  el.sheetFoot.appendChild(button(t("action.done"), "btn-primary", closeSheet));
+}
+
 /* ---------- top bar ---------- */
 
 document.querySelectorAll(".seg").forEach((segment) => {
@@ -1570,6 +1645,7 @@ el.swap.addEventListener("click", () => {
 });
 
 el.go.addEventListener("click", openTransferSheet);
+el.compare.addEventListener("click", openCompareSheet);
 
 /* ---------- boot ---------- */
 

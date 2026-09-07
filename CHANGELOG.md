@@ -6,6 +6,16 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-09-07
+
+### Added
+
+- **Compare**, next to the transfer button. Select items and it counts them on
+  both sides, read only, and shows the two totals against each other. The
+  verification that runs after a transfer already said "everything arrived",
+  and people still opened Drive in a browser to check by eye; this is the same
+  answer, on demand, with the numbers visible.
+
 ## [0.4.1] - 2026-09-07
 
 ### Fixed
@@ -125,7 +135,8 @@ First public release.
 - Account secrets never leave the Python process; the UI only receives a remote
   name and its backend type.
 
-[Unreleased]: https://github.com/rlpb/driveferry/compare/v0.4.1...HEAD
+[Unreleased]: https://github.com/rlpb/driveferry/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/rlpb/driveferry/releases/tag/v0.5.0
 [0.4.1]: https://github.com/rlpb/driveferry/releases/tag/v0.4.1
 [0.4.0]: https://github.com/rlpb/driveferry/releases/tag/v0.4.0
 [0.3.0]: https://github.com/rlpb/driveferry/releases/tag/v0.3.0

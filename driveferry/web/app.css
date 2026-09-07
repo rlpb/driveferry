@@ -980,3 +980,21 @@ body.is-web .tb-controls, body.is-web .tb-lights { display: none; }
    meaning without a full-width red slab sitting under a healthy progress bar. */
 .btn-quiet-danger { background: var(--fill-3); color: var(--red); }
 .btn-quiet-danger:hover:not([disabled]) { background: var(--tint-danger); }
+
+/* A read-only check anyone can run at any moment, so "did it all arrive"
+   never has to be answered by eye. */
+.compare-btn {
+  appearance: none;
+  border: 0;
+  cursor: pointer;
+  padding: 5px 12px;
+  border-radius: var(--radius-s);
+  background: var(--fill-3);
+  color: var(--label-2);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 500;
+  transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+.compare-btn:hover:not([disabled]) { background: var(--fill-2); color: var(--label); }
+.compare-btn[disabled] { opacity: 0.4; cursor: default; }

@@ -50,6 +50,10 @@ what to move, and you press one button.
 - **Move that cannot eat your data.** Move is three steps: copy, verify that
   every file arrived, and only then delete the originals, on a separate
   confirmation you have to press yourself.
+- **Compare, whenever you want.** Select the same names on both sides and
+  press Compare: file counts and byte totals, side by side, read only. The
+  answer to "did all of it actually arrive" without opening Drive in a
+  browser and counting by eye.
 - **Verification before deletion.** File count and byte total are compared on
   both sides. A mismatch cancels the delete step.
 - **Dry run.** Ask rclone what it would transfer, and write nothing.

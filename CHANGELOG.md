@@ -6,6 +6,8 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-09-07
+
 ### Added
 
 - Connect a Google account from inside the app. A wizard drives rclone's own
@@ -65,5 +67,6 @@ First public release.
 - Account secrets never leave the Python process; the UI only receives a remote
   name and its backend type.
 
-[Unreleased]: https://github.com/rlpb/driveferry/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/rlpb/driveferry/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/rlpb/driveferry/releases/tag/v0.2.0
 [0.1.0]: https://github.com/rlpb/driveferry/releases/tag/v0.1.0

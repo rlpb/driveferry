@@ -975,3 +975,8 @@ body.is-web .tb-controls, body.is-web .tb-lights { display: none; }
 @media (prefers-reduced-motion: reduce) {
   .progress-sweep { animation: none; opacity: 0.4; }
 }
+
+/* Cancelling a running transfer is not an emergency: a red label carries the
+   meaning without a full-width red slab sitting under a healthy progress bar. */
+.btn-quiet-danger { background: var(--fill-3); color: var(--red); }
+.btn-quiet-danger:hover:not([disabled]) { background: var(--tint-danger); }

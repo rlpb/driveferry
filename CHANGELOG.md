@@ -6,6 +6,17 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-09-07
+
+### Fixed
+
+- The progress bar could step backwards. rclone keeps discovering files while
+  it transfers, so the total it is measured against grows, and a plain
+  bytes-over-total shrinks when it does. The bar only moves forward now: when
+  the total grows it pauses instead of retreating.
+- Cancelling a running transfer was a full-width red slab under a perfectly
+  healthy progress bar. The label stays red, the button does not.
+
 ## [0.4.0] - 2026-09-07
 
 Everything here came from the first run against two real Google accounts.
@@ -114,7 +125,8 @@ First public release.
 - Account secrets never leave the Python process; the UI only receives a remote
   name and its backend type.
 
-[Unreleased]: https://github.com/rlpb/driveferry/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/rlpb/driveferry/compare/v0.4.1...HEAD
+[0.4.1]: https://github.com/rlpb/driveferry/releases/tag/v0.4.1
 [0.4.0]: https://github.com/rlpb/driveferry/releases/tag/v0.4.0
 [0.3.0]: https://github.com/rlpb/driveferry/releases/tag/v0.3.0
 [0.2.0]: https://github.com/rlpb/driveferry/releases/tag/v0.2.0

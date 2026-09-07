@@ -1362,7 +1362,12 @@ async function startTransfer(context, isMove, dryRun, serverSide) {
   const byJob = new Map(started.jobs.map((job) => [job.jobid, job.name]));
   setStatusKey("status.transferring", {}, "busy");
 
-  const cancel = button(t("btn.cancelTransfer"), "btn-danger", async () => {
+  /* rclone keeps discovering files while it transfers, so total_bytes grows and
+     a plain bytes/total would step backwards. The bar only ever moves forward:
+     when the total grows it pauses instead of retreating. */
+  let shown = 0;
+
+  const cancel = button(t("btn.cancelTransfer"), "btn-quiet-danger", async () => {
     cancel.disabled = true;
     await api("transfer_cancel", { jobs: jobIds }).catch(() => {});
     toast(t("toast.cancelling"));
@@ -1395,7 +1400,8 @@ async function startTransfer(context, isMove, dryRun, serverSide) {
         : status.finished
           ? 1
           : 0;
-      fill.setAttribute("width", String((ratio * 100).toFixed(2)));
+      shown = status.finished ? 1 : Math.max(shown, ratio);
+      fill.setAttribute("width", String((shown * 100).toFixed(2)));
       doneLabel.textContent = t("progress.of", {
         done: formatBytes(stats.bytes),
         total: formatBytes(stats.total_bytes),

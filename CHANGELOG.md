@@ -6,6 +6,30 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-09-07
+
+### Changed
+
+- Connecting an account is one button. Give it a name, press Sign in with
+  Google, approve in the browser. The client ID is no longer asked for up
+  front.
+
+### Added
+
+- A five-step walkthrough for creating your own Google client ID, each step
+  with the button that opens exactly the Google page it describes. Set it up
+  once in Settings and every account connected afterwards uses it, which is
+  what keeps sign-in working when rclone's shared client is retired.
+- The client ID and secret are stored with the other settings, so they are
+  entered once rather than per account.
+
+### Security
+
+- The stored client secret is never sent to the page, and never appears in any
+  API response.
+- The walkthrough's buttons ask the window to open a page by position in a
+  fixed list, so the page cannot steer the browser anywhere else.
+
 ## [0.2.0] - 2026-09-07
 
 ### Added
@@ -67,6 +91,7 @@ First public release.
 - Account secrets never leave the Python process; the UI only receives a remote
   name and its backend type.
 
-[Unreleased]: https://github.com/rlpb/driveferry/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/rlpb/driveferry/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/rlpb/driveferry/releases/tag/v0.3.0
 [0.2.0]: https://github.com/rlpb/driveferry/releases/tag/v0.2.0
 [0.1.0]: https://github.com/rlpb/driveferry/releases/tag/v0.1.0

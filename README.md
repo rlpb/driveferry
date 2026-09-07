@@ -102,39 +102,39 @@ and the first run sets everything up.
 
 ## Connect your accounts
 
-Press **Connect an account** in the app. No terminal, and no password typed
-into DriveFerry: the consent page that asks for it is Google's own, opened in
-your browser.
+Press **Connect an account**, give it a name you will recognise, and press
+**Sign in with Google**. Google's own consent page opens in your browser, you
+allow access, and the app fills in by itself. Repeat for the second account.
+
+Your password is never typed into DriveFerry. The page that asks for it is
+Google's.
 
 <div align="center">
-<img src="docs/screenshot-connect.png" alt="The connect wizard, asking for a name and a Google client ID" width="900">
+<img src="docs/screenshot-connect.png" alt="The connect wizard: a name, then sign in with Google" width="900">
 </div>
 
-The wizard asks for two things.
+<details>
+<summary>Using your own Google client ID</summary>
 
-**A name.** Anything you will recognise in the two pickers: `Personal`,
-`Work`, `Old account`.
+Sign-in goes through rclone's shared Google client, which every rclone user in
+the world shares. Two reasons to swap in your own, from **Use my own Google
+client ID** in the wizard:
 
-**A Google client ID.** This is the part worth reading. rclone ships a shared
-client ID that any rclone user can use, and rclone itself now says it:
+- large migrations can hit Google's rate limit on the shared client
+- rclone reports that this shared client is being retired during 2026
 
-> rclone's shared Google Drive client_id is being retired and will stop working
-> during 2026.
+It is free and takes about ten minutes, and the app walks you through it:
+five steps, each with the button that opens exactly the Google page that step
+is about. Settings, then **Google client ID**.
 
-It is also rate limited across every rclone user in the world, so a large
-migration through it can crawl. Making your own is free, stays yours, and takes
-about ten minutes:
+<div align="center">
+<img src="docs/screenshot-client.png" alt="Step one of five in the client ID walkthrough" width="900">
+</div>
 
-1. Open [rclone's guide](https://rclone.org/drive/#making-your-own-client-id)
-2. Create a project in the Google Cloud console
-3. Enable the Google Drive API for it
-4. Create an OAuth client of type **Desktop**
-5. Paste the client ID and client secret into the wizard
+Set it up once and every account you connect from then on uses it, on this
+computer and any other.
 
-Then press **Open Google and connect**, pick the account in the browser window
-that opens, and allow access. The app fills in by itself.
-
-Repeat for the second account, and both appear in the pickers.
+</details>
 
 > Prefer the terminal, or connecting something other than Drive? `rclone config`
 > still works, and every remote it creates shows up in DriveFerry.

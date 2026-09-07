@@ -17,6 +17,7 @@ from __future__ import annotations
 import json
 import mimetypes
 import posixpath
+import re
 import secrets
 import sys
 import threading
@@ -86,7 +87,23 @@ PREF_VALUES = {
     "theme": {"system", "light", "dark"},
     "locale": {"system", "en", "it"},
 }
-DEFAULT_PREFS = {"theme": "system", "locale": "system"}
+
+#: Free-text preferences, with the shape each one must have. The Google client
+#: is kept here so it is set up once and every later account reuses it: that is
+#: what makes signing in work forever without depending on rclone's shared
+#: client. A desktop OAuth client secret is not a real secret (Google calls
+#: these public clients, and it ships inside every desktop app that uses one),
+#: which is why storing it beside the other settings is acceptable.
+PREF_TEXT = {
+    "google_client_id": re.compile(r"^[A-Za-z0-9._-]{0,200}$"),
+    "google_client_secret": re.compile(r"^[A-Za-z0-9._~-]{0,200}$"),
+}
+
+DEFAULT_PREFS = {"theme": "system", "locale": "system", "google_client_id": "", "google_client_secret": ""}
+
+#: Never sent to the page. The client id is shown so the user can check it; the
+#: secret only ever travels towards rclone.
+PRIVATE_PREFS = ("google_client_secret",)
 
 
 class Api:
@@ -113,7 +130,15 @@ class Api:
             for key, allowed in PREF_VALUES.items():
                 if stored.get(key) in allowed:
                     prefs[key] = stored[key]
+            for key, pattern in PREF_TEXT.items():
+                value = stored.get(key)
+                if isinstance(value, str) and pattern.match(value):
+                    prefs[key] = value
         return prefs
+
+    def public_prefs(self):
+        """What the page is allowed to see."""
+        return {key: value for key, value in self.prefs.items() if key not in PRIVATE_PREFS}
 
     def op_prefs_set(self, payload):
         for key, allowed in PREF_VALUES.items():
@@ -121,13 +146,19 @@ class Api:
                 if payload[key] not in allowed:
                     raise ApiError("invalid value for {}".format(key))
                 self.prefs[key] = payload[key]
+        for key, pattern in PREF_TEXT.items():
+            if key in payload:
+                value = payload[key]
+                if not isinstance(value, str) or not pattern.match(value.strip()):
+                    raise ApiError("that {} does not look right".format(key.replace("_", " ")))
+                self.prefs[key] = value.strip()
         if self.prefs_path:
             try:
                 self.prefs_path.parent.mkdir(parents=True, exist_ok=True)
                 self.prefs_path.write_text(json.dumps(self.prefs, indent=2), encoding="utf-8")
             except OSError as exc:
                 raise ApiError("could not save settings: {}".format(exc)) from exc
-        return dict(self.prefs)
+        return self.public_prefs()
 
     # -- helpers -----------------------------------------------------------
 
@@ -183,6 +214,7 @@ class Api:
             "rclone_version": version.get("version"),
             "rclone_binary": self.daemon.binary,
             "remotes": self.remotes(refresh=True),
+            "google_client_id": self.prefs.get("google_client_id", ""),
         }
 
     def op_list(self, payload):
@@ -394,12 +426,21 @@ class Api:
     def op_account_connect(self, payload):
         """Start rclone's Drive setup. Google's consent page opens in the
         browser, which is where a password belongs; nothing is typed here."""
+        # A client saved in Settings is set up once and reused by every later
+        # account, which is what keeps signing in working without depending on
+        # rclone's shared client.
+        client_id = (payload.get("client_id") or self.prefs.get("google_client_id") or "").strip()
+        client_secret = (
+            payload.get("client_secret")
+            if payload.get("client_id")
+            else self.prefs.get("google_client_secret")
+        ) or ""
         try:
             self.setup.start(
                 payload.get("name") or "",
-                client_id=payload.get("client_id") or "",
-                client_secret=payload.get("client_secret") or "",
-                allow_shared_client=bool(payload.get("allow_shared_client")),
+                client_id=client_id,
+                client_secret=client_secret.strip(),
+                allow_shared_client=bool(payload.get("allow_shared_client")) or not client_id,
             )
         except ValueError as exc:
             raise ApiError(str(exc)) from exc
@@ -508,9 +549,10 @@ class _Handler(BaseHTTPRequestHandler):
         if filename == "index.html":
             data = data.replace(b"__DRIVEFERRY_TOKEN__", self.server.token.encode())
             data = data.replace(b"__DRIVEFERRY_PLATFORM__", self.server.platform.encode())
-            # Both values come from a fixed whitelist, so there is nothing to
-            # escape and nothing a stored file could inject into the page.
-            for key, value in self.server.api.prefs.items():
+            # Values come from a fixed whitelist or a validated pattern, so
+            # there is nothing to escape and nothing a stored file could inject
+            # into the page. The client secret is not among them.
+            for key, value in self.server.api.public_prefs().items():
                 data = data.replace("__DRIVEFERRY_{}__".format(key.upper()).encode(), value.encode())
         content_type = mimetypes.guess_type(filename)[0] or "application/octet-stream"
         return self._send(HTTPStatus.OK, data, content_type + "; charset=utf-8")

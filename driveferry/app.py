@@ -22,6 +22,17 @@ WINDOW_TITLE = "DriveFerry"
 WINDOW_SIZE = (1220, 780)
 MIN_WINDOW_SIZE = (940, 620)
 
+#: The pages the Google client walkthrough sends people to, in order. The page
+#: asks for one of these by position, so a compromised page could not use the
+#: bridge to navigate anywhere else.
+SETUP_URLS = (
+    "https://console.cloud.google.com/projectcreate",
+    "https://console.cloud.google.com/apis/library/drive.googleapis.com",
+    "https://console.cloud.google.com/auth/overview",
+    "https://console.cloud.google.com/auth/clients/create",
+    "https://rclone.org/drive/#making-your-own-client-id",
+)
+
 
 #: The live window, kept out of the bridge object on purpose. pywebview walks
 #: the attributes of whatever is passed as `js_api`, and a Window holds a
@@ -61,13 +72,17 @@ class WindowBridge:
             _WINDOW.destroy()
         return True
 
-    def open_guide(self):
-        """Open rclone's client-ID guide in the real browser.
+    def open_setup_page(self, index):
+        """Open one page of the Google client setup in the real browser.
 
-        It takes no argument on purpose: the page can ask for this one page and
-        nothing else, so it can never steer the window somewhere unexpected.
+        The page passes a position in SETUP_URLS, never a URL, so it can only
+        ever reach one of the addresses listed below.
         """
-        webbrowser.open("https://rclone.org/drive/#making-your-own-client-id")
+        try:
+            url = SETUP_URLS[int(index)]
+        except (TypeError, ValueError, IndexError):
+            return False
+        webbrowser.open(url)
         return True
 
 

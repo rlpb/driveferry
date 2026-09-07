@@ -210,7 +210,41 @@ def test_about_reports_unsupported_instead_of_failing():
 
 def test_prefs_default_to_following_the_system():
     api, _ = make_api()
-    assert api.prefs == {"theme": "system", "locale": "system"}
+    assert api.prefs["theme"] == "system"
+    assert api.prefs["locale"] == "system"
+    assert api.prefs["google_client_id"] == ""
+
+
+def test_the_client_secret_never_reaches_the_page(tmp_path):
+    from driveferry.server import Api
+
+    api = Api(FakeDaemon(), prefs_path=tmp_path / "settings.json")
+    api.op_prefs_set({"google_client_id": "abc.apps.googleusercontent.com", "google_client_secret": "s3cr3t"})
+    assert "s3cr3t" not in repr(api.public_prefs())
+    assert "s3cr3t" not in repr(api.op_prefs_set({"theme": "dark"}))
+    assert "s3cr3t" not in repr(api.op_state({}))
+    assert api.op_state({})["google_client_id"] == "abc.apps.googleusercontent.com"
+
+
+def test_a_saved_client_is_reused_by_the_next_account(tmp_path):
+    from driveferry.server import Api
+
+    daemon = FakeDaemon({"config/create": {"State": "", "Error": ""}, "config/dump": {"New": {"token": "t"}}})
+    api = Api(daemon, prefs_path=tmp_path / "settings.json")
+    api.op_prefs_set({"google_client_id": "mine.apps.googleusercontent.com", "google_client_secret": "sh"})
+    api.op_account_connect({"name": "New"})
+    api.setup._thread.join(timeout=5)
+    created = next(call for call in daemon.calls if call[0] == "config/create")
+    assert created[1]["parameters"]["client_id"] == "mine.apps.googleusercontent.com"
+
+
+@pytest.mark.parametrize("bad", ["has space", "quote'", "new\nline", "a" * 300, 5, None])
+def test_a_malformed_client_id_is_refused(bad, tmp_path):
+    from driveferry.server import Api
+
+    api = Api(FakeDaemon(), prefs_path=tmp_path / "settings.json")
+    with pytest.raises(ApiError):
+        api.op_prefs_set({"google_client_id": bad})
 
 
 def test_prefs_are_written_and_read_back_by_a_fresh_api(tmp_path):
@@ -221,7 +255,8 @@ def test_prefs_are_written_and_read_back_by_a_fresh_api(tmp_path):
     first.op_prefs_set({"theme": "dark", "locale": "it"})
 
     second = Api(FakeDaemon(), prefs_path=path)
-    assert second.prefs == {"theme": "dark", "locale": "it"}
+    assert second.prefs["theme"] == "dark"
+    assert second.prefs["locale"] == "it"
 
 
 @pytest.mark.parametrize(
@@ -242,7 +277,8 @@ def test_prefs_ignore_unknown_keys(tmp_path):
 
     api = Api(FakeDaemon(), prefs_path=tmp_path / "settings.json")
     api.op_prefs_set({"theme": "light", "rclone_binary": "/tmp/evil"})
-    assert api.prefs == {"theme": "light", "locale": "system"}
+    assert api.prefs["theme"] == "light"
+    assert "rclone_binary" not in api.prefs
 
 
 def test_a_corrupt_settings_file_falls_back_to_defaults(tmp_path):
@@ -250,7 +286,8 @@ def test_a_corrupt_settings_file_falls_back_to_defaults(tmp_path):
 
     path = tmp_path / "settings.json"
     path.write_text("{not json", encoding="utf-8")
-    assert Api(FakeDaemon(), prefs_path=path).prefs == {"theme": "system", "locale": "system"}
+    prefs = Api(FakeDaemon(), prefs_path=path).prefs
+    assert prefs["theme"] == "system" and prefs["locale"] == "system"
 
 
 def test_transfer_status_rejects_a_foreign_group():

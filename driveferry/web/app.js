@@ -909,8 +909,29 @@ function openSettings() {
   accounts.appendChild(connect);
   el.sheetBody.appendChild(accounts);
 
+  const clientRow = document.createElement("div");
+  clientRow.className = "setting-row";
+  const clientLabel = document.createElement("span");
+  clientLabel.className = "setting-label";
+  clientLabel.textContent = t("client.title");
+  const clientRight = document.createElement("span");
+  clientRight.className = "row-actions";
+  const clientValue = document.createElement("span");
+  clientValue.className = "setting-value";
+  clientValue.textContent = state.info.google_client_id ? t("client.setUp") : t("client.notSet");
+  const clientButton = document.createElement("button");
+  clientButton.type = "button";
+  clientButton.className = "linklike";
+  clientButton.textContent = t(state.info.google_client_id ? "client.change" : "client.configure");
+  clientButton.addEventListener("click", openClientSheet);
+  clientRight.appendChild(clientValue);
+  clientRight.appendChild(clientButton);
+  clientRow.appendChild(clientLabel);
+  clientRow.appendChild(clientRight);
+
   el.sheetBody.appendChild(
     group("settings.about", [
+      clientRow,
       valueRow("settings.rcloneVersion", state.info.rclone_version || "-"),
       valueRow("settings.rclonePath", state.info.rclone_binary || "-"),
     ])
@@ -945,15 +966,24 @@ function textField(id, labelText, placeholder, type) {
   return { wrap: wrap, input: input };
 }
 
-function openGuide() {
-  const api = window.pywebview && window.pywebview.api;
-  if (api && api.open_guide) api.open_guide();
-  else window.open("https://rclone.org/drive/#making-your-own-client-id", "_blank", "noopener");
+/* Mirrors SETUP_URLS in app.py. The window opens them by position through the
+   bridge; in a plain browser tab there is no bridge, so the same list is used
+   directly. */
+const SETUP_URLS = [
+  "https://console.cloud.google.com/projectcreate",
+  "https://console.cloud.google.com/apis/library/drive.googleapis.com",
+  "https://console.cloud.google.com/auth/overview",
+  "https://console.cloud.google.com/auth/clients/create",
+  "https://rclone.org/drive/#making-your-own-client-id",
+];
+
+function openSetupPage(index) {
+  const bridge = window.pywebview && window.pywebview.api;
+  if (bridge && bridge.open_setup_page) bridge.open_setup_page(index);
+  else window.open(SETUP_URLS[index], "_blank", "noopener");
 }
 
-/* Kept outside the sheet so switching between the two client-ID choices, which
-   redraws the sheet, does not throw away what has already been typed. */
-const connectDraft = { name: "", clientId: "", clientSecret: "", own: true };
+const connectDraft = { name: "" };
 
 function openConnectSheet() {
   openSheet(t("account.connectTitle"));
@@ -963,73 +993,38 @@ function openConnectSheet() {
   name.input.addEventListener("input", () => {
     connectDraft.name = name.input.value;
   });
+  el.sheetBody.appendChild(name.wrap);
+
   const hint = document.createElement("p");
   hint.className = "group-hint";
   hint.textContent = t("account.nameHint");
-  el.sheetBody.appendChild(name.wrap);
   el.sheetBody.appendChild(hint);
 
-  const picker = settingRow(
-    "account.clientTitle",
-    miniSegmented(
-      [
-        { value: "own", label: t("account.clientOwn") },
-        { value: "shared", label: t("account.clientShared") },
-      ],
-      connectDraft.own ? "own" : "shared",
-      (value) => {
-        connectDraft.own = value === "own";
-        openConnectSheet();
-      }
-    )
-  );
-  picker.classList.add("setting-row-flat");
-  el.sheetBody.appendChild(picker);
+  const signInHint = document.createElement("p");
+  signInHint.className = "group-hint";
+  signInHint.textContent = t("account.signInHint");
+  el.sheetBody.appendChild(signInHint);
 
-  let clientId = null;
-  let clientSecret = null;
-
-  if (connectDraft.own) {
-    el.sheetBody.appendChild(notice("info", "i-alert", t("account.clientWhy")));
-    const steps = document.createElement("p");
-    steps.className = "group-hint";
-    steps.textContent = t("account.clientSteps");
-    el.sheetBody.appendChild(steps);
-
-    const guide = document.createElement("button");
-    guide.type = "button";
-    guide.className = "linklike";
-    guide.textContent = t("account.clientGuide");
-    guide.addEventListener("click", openGuide);
-    el.sheetBody.appendChild(guide);
-
-    clientId = textField("account-client-id", t("account.clientId"), "");
-    clientSecret = textField("account-client-secret", t("account.clientSecret"), "", "password");
-    clientId.input.value = connectDraft.clientId;
-    clientSecret.input.value = connectDraft.clientSecret;
-    clientId.input.addEventListener("input", () => {
-      connectDraft.clientId = clientId.input.value;
-    });
-    clientSecret.input.addEventListener("input", () => {
-      connectDraft.clientSecret = clientSecret.input.value;
-    });
-    el.sheetBody.appendChild(clientId.wrap);
-    el.sheetBody.appendChild(clientSecret.wrap);
+  /* One button is the whole flow. The client ID is a one-off setup that lives
+     in Settings, so it is offered here as a line, not as a form to fill in
+     before every account. */
+  if (state.info.google_client_id) {
+    el.sheetBody.appendChild(notice("ok", "i-check", t("client.usingOwn")));
   } else {
-    el.sheetBody.appendChild(notice("warn", "i-alert", t("account.sharedWarning")));
+    const configure = document.createElement("button");
+    configure.type = "button";
+    configure.className = "linklike";
+    configure.textContent = t("client.configure");
+    configure.addEventListener("click", openClientSheet);
+    el.sheetBody.appendChild(configure);
   }
 
   el.sheetFoot.appendChild(button(t("action.cancel"), "", closeSheet));
   el.sheetFoot.appendChild(
-    button(t("account.start"), "btn-primary", async () => {
+    button(t("account.signIn"), "btn-primary", async () => {
       const wanted = connectDraft.name.trim();
       try {
-        await api("account_connect", {
-          name: wanted,
-          client_id: connectDraft.own ? connectDraft.clientId.trim() : "",
-          client_secret: connectDraft.own ? connectDraft.clientSecret.trim() : "",
-          allow_shared_client: !connectDraft.own,
-        });
+        await api("account_connect", { name: wanted, allow_shared_client: true });
       } catch (error) {
         toast(error.message, true);
         return;
@@ -1039,6 +1034,132 @@ function openConnectSheet() {
     })
   );
   name.input.focus();
+}
+
+/* ---------- the one-off Google client setup ---------- */
+
+/* One screen per step, with the button that opens exactly the page that step
+   talks about. Someone who has never seen the Google Cloud console should be
+   able to finish without reading anything else. */
+const CLIENT_STEPS = [
+  { key: "client.step1", url: 0 },
+  { key: "client.step2", url: 1 },
+  { key: "client.step3", url: 2 },
+  { key: "client.step4", url: 3 },
+  { key: "client.step5", url: null },
+];
+
+const clientDraft = { step: 0, id: "", secret: "" };
+
+function openClientSheet(restart) {
+  if (restart !== false) clientDraft.step = 0;
+  openSheet(t("client.title"));
+
+  if (clientDraft.step === 0) {
+    el.sheetBody.appendChild(notice("info", "i-alert", t("client.why")));
+  }
+
+  const step = CLIENT_STEPS[clientDraft.step];
+  const counter = document.createElement("p");
+  counter.className = "group-title";
+  counter.textContent = t("client.step", { n: clientDraft.step + 1, total: CLIENT_STEPS.length });
+  el.sheetBody.appendChild(counter);
+
+  const title = document.createElement("h3");
+  title.className = "step-title";
+  title.textContent = t(step.key + ".title");
+  el.sheetBody.appendChild(title);
+
+  const body = document.createElement("p");
+  body.className = "step-body";
+  body.textContent = t(step.key + ".body");
+  el.sheetBody.appendChild(body);
+
+  if (step.url !== null) {
+    const open = document.createElement("button");
+    open.type = "button";
+    open.className = "btn btn-primary group-action";
+    open.textContent = t("client.openPage");
+    open.addEventListener("click", () => openSetupPage(step.url));
+    el.sheetBody.appendChild(open);
+  } else {
+    const clientId = textField("client-id", t("account.clientId"), "");
+    const clientSecret = textField("client-secret", t("account.clientSecret"), "", "password");
+    clientId.input.value = clientDraft.id || state.info.google_client_id || "";
+    clientSecret.input.value = clientDraft.secret;
+    clientId.input.addEventListener("input", () => {
+      clientDraft.id = clientId.input.value;
+    });
+    clientSecret.input.addEventListener("input", () => {
+      clientDraft.secret = clientSecret.input.value;
+    });
+    el.sheetBody.appendChild(clientId.wrap);
+    el.sheetBody.appendChild(clientSecret.wrap);
+  }
+
+  const stuck = document.createElement("p");
+  stuck.className = "group-hint";
+  stuck.textContent = t("client.stuck");
+  el.sheetBody.appendChild(stuck);
+  const guide = document.createElement("button");
+  guide.type = "button";
+  guide.className = "linklike";
+  guide.textContent = t("account.clientGuide");
+  guide.addEventListener("click", () => openSetupPage(4));
+  el.sheetBody.appendChild(guide);
+
+  el.sheetFoot.appendChild(
+    button(clientDraft.step === 0 ? t("action.cancel") : t("client.back"), "", () => {
+      if (clientDraft.step === 0) {
+        closeSheet();
+        return;
+      }
+      clientDraft.step -= 1;
+      openClientSheet(false);
+    })
+  );
+
+  if (clientDraft.step < CLIENT_STEPS.length - 1) {
+    el.sheetFoot.appendChild(
+      button(t("client.next"), "btn-primary", () => {
+        clientDraft.step += 1;
+        openClientSheet(false);
+      })
+    );
+  } else {
+    if (state.info.google_client_id) {
+      el.sheetFoot.appendChild(
+        button(t("client.clear"), "btn-danger", async () => {
+          try {
+            await api("prefs_set", { google_client_id: "", google_client_secret: "" });
+            state.info.google_client_id = "";
+            clientDraft.id = "";
+            clientDraft.secret = "";
+            toast(t("client.cleared"));
+            closeSheet();
+          } catch (error) {
+            toast(error.message, true);
+          }
+        })
+      );
+    }
+    el.sheetFoot.appendChild(
+      button(t("action.done"), "btn-primary", async () => {
+        try {
+          await api("prefs_set", {
+            google_client_id: clientDraft.id.trim(),
+            google_client_secret: clientDraft.secret.trim(),
+          });
+          state.info.google_client_id = clientDraft.id.trim();
+          clientDraft.secret = "";
+          toast(t("client.saved"));
+          closeSheet();
+        } catch (error) {
+          toast(error.message, true);
+        }
+      })
+    );
+  }
 }
 
 function waitForConnection(accountName) {

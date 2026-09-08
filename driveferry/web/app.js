@@ -104,6 +104,7 @@ const el = {
   dry: document.getElementById("opt-dry"),
   serverSide: document.getElementById("opt-serverside"),
   settings: document.getElementById("settings-btn"),
+  statusAction: document.getElementById("status-action"),
 };
 
 document.querySelectorAll(".pane").forEach((node) => {
@@ -446,6 +447,7 @@ function renderGo() {
 /* ---------- data ---------- */
 
 async function refreshPane(side, options) {
+  const opts = options || {};
   const pane = state.panes[side];
   if (!pane.remote) {
     el.panes[side].list.textContent = "";
@@ -454,25 +456,41 @@ async function refreshPane(side, options) {
     return;
   }
   pane.loading = true;
-  renderSkeleton(side);
+  // A folder already visited comes back from the cache in a few milliseconds.
+  // A skeleton drawn for that long is a flash, not feedback, so it waits until
+  // the wait is long enough to be worth explaining.
+  const skeleton = setTimeout(() => renderSkeleton(side), 150);
+  const wanted = { remote: pane.remote, path: pane.path };
+  const started = performance.now();
   try {
-    const data = await api("list", { remote: pane.remote, path: pane.path });
+    const data = await api("list", { remote: wanted.remote, path: wanted.path, refresh: !!opts.refresh });
+    clearTimeout(skeleton);
+    reportSlowListing(performance.now() - started);
+    // Two folders opened quickly race each other, and a cached answer can now
+    // overtake a slow one. Whichever the user asked for last is the one drawn.
+    if (pane.remote !== wanted.remote || pane.path !== wanted.path) return;
     pane.entries = data.entries;
-    if (!options || !options.keepSelection) {
+    if (!opts.keepSelection) {
       pane.selected.clear();
       pane.cursor = -1;
     }
     renderList(side);
     renderCrumbs(side);
   } catch (error) {
+    if (pane.remote !== wanted.remote || pane.path !== wanted.path) return;
     el.panes[side].list.textContent = "";
     renderEmpty(side, t("empty.error.title"), error.message, "i-alert");
     renderCrumbs(side);
   } finally {
+    clearTimeout(skeleton);
     pane.loading = false;
     renderGo();
   }
 
+  // Free space only moves when something is written, so asking on every folder
+  // opened is a second round trip that always answers the same thing.
+  if (!opts.refresh && pane.aboutFor === pane.remote) return;
+  pane.aboutFor = pane.remote;
   api("about", { remote: pane.remote })
     .then((about) => {
       pane.about = about;
@@ -482,6 +500,21 @@ async function refreshPane(side, options) {
       pane.about = null;
       renderStorage(side, null);
     });
+}
+
+/* Google rate limits rclone's shared Google client across every rclone user in
+   the world, and rclone answers a 403 by sleeping: one folder can take half a
+   minute. Nothing in the app can make that faster, so when it happens the app
+   says so and offers the one thing that does fix it. */
+const SLOW_LISTING_MS = 4000;
+let slowListingReported = false;
+
+function reportSlowListing(elapsed) {
+  if (slowListingReported || elapsed < SLOW_LISTING_MS) return;
+  if (!state.info.shared_client) return;
+  slowListingReported = true;
+  setStatusKey("status.throttled", {}, "warn");
+  el.statusAction.hidden = false;
 }
 
 /** Redraw every string the current language touches, without refetching. */
@@ -657,7 +690,7 @@ Object.keys(el.panes).forEach((side) => {
   });
   nodes.root.querySelectorAll("[data-action]").forEach((button) => {
     button.addEventListener("click", () => {
-      if (button.dataset.action === "refresh") refreshPane(side);
+      if (button.dataset.action === "refresh") refreshPane(side, { refresh: true });
       if (button.dataset.action === "newfolder") openNewFolderSheet(side);
     });
   });
@@ -1305,6 +1338,16 @@ function buildTransferBody(context, isMove, dryRun, serverSide) {
   if (dryRun) el.sheetBody.appendChild(notice("info", "i-check", t("notice.dryRun")));
   if (isMove && !dryRun) el.sheetBody.appendChild(notice("warn", "i-alert", t("notice.moveSteps")));
   if (serverSide) el.sheetBody.appendChild(notice("info", "i-cloud", t("notice.serverSide")));
+  // The destination listing is already on screen, so saying what is about to be
+  // replaced costs nothing and answers the question before it is asked.
+  const clashes = context.names.filter((name) =>
+    (context.to.entries || []).some((entry) => entry.name === name)
+  );
+  if (clashes.length && !dryRun) {
+    el.sheetBody.appendChild(
+      notice("info", "i-refresh", t("notice.overwrite", { n: clashes.length, total: context.names.length }))
+    );
+  }
   el.sheetBody.appendChild(itemList(context.names, context.dirs));
 }
 
@@ -1432,7 +1475,7 @@ async function startTransfer(context, isMove, dryRun, serverSide) {
     fill.classList.toggle("is-done", status.stage === "done");
     fill.classList.toggle("is-failed", failures.length > 0);
     setStatusKey("status.idle", {}, "ok");
-    refreshPane(context.toSide);
+    refreshPane(context.toSide, { refresh: true });
 
     if (status.stage === "cancelled") {
       el.sheetFoot.appendChild(button(t("action.close"), "", closeSheet));
@@ -1540,7 +1583,7 @@ async function runVerification(context, isMove) {
         if (deleted.failed.length) toast(t("toast.deleteFailed", { n: deleted.failed.length }), true);
         else toast(t("toast.moved", { n: deleted.deleted.length }));
         closeSheet();
-        refreshPane(context.fromSide);
+        refreshPane(context.fromSide, { refresh: true });
       } catch (error) {
         toast(error.message, true);
       }
@@ -1647,6 +1690,7 @@ el.swap.addEventListener("click", () => {
   refreshPane("dst");
 });
 
+el.statusAction.addEventListener("click", () => openClientSheet());
 el.go.addEventListener("click", openTransferSheet);
 el.compare.addEventListener("click", openCompareSheet);
 

@@ -218,3 +218,56 @@ def test_a_traversal_attempt_is_refused_by_the_live_server(live):
     with pytest.raises(urllib.error.HTTPError) as exc:
         call(live, "list", {"remote": "accountA", "path": "../.."})
     assert exc.value.code == 400
+
+
+def test_copying_the_same_name_twice_overwrites_and_never_duplicates(live):
+    """What happens when you copy something that is already there.
+
+    rclone never asks and never makes a second copy beside the first: an
+    identical file is skipped, a changed one replaces what is there.
+    """
+    source = live["src"] / "again.txt"
+    source.write_text("first version", encoding="utf-8")
+
+    plan = {
+        "src_remote": "accountA",
+        "src_path": "",
+        "dst_remote": "accountB",
+        "dst_path": "",
+        "names": ["again.txt"],
+        "dirs": [],
+    }
+    wait_for(live, call(live, "transfer", plan))
+    assert (live["dst"] / "again.txt").read_text(encoding="utf-8") == "first version"
+
+    source.write_text("second version, longer than the first", encoding="utf-8")
+    status = wait_for(live, call(live, "transfer", plan))
+    assert failures(status) == []
+
+    landed = (live["dst"] / "again.txt").read_text(encoding="utf-8")
+    assert landed == "second version, longer than the first"
+    # nothing called "again (1).txt" appeared beside it
+    assert sorted(path.name for path in live["dst"].glob("again*")) == ["again.txt"]
+
+
+def test_a_finished_copy_is_visible_even_though_listings_are_cached(live):
+    """The cache must never be the reason a finished copy looks missing."""
+    call(live, "list", {"remote": "accountB", "path": ""})
+    (live["src"] / "fresh.txt").write_text("fresh", encoding="utf-8")
+    wait_for(
+        live,
+        call(
+            live,
+            "transfer",
+            {
+                "src_remote": "accountA",
+                "src_path": "",
+                "dst_remote": "accountB",
+                "dst_path": "",
+                "names": ["fresh.txt"],
+                "dirs": [],
+            },
+        ),
+    )
+    names = [entry["name"] for entry in call(live, "list", {"remote": "accountB", "path": ""})["entries"]]
+    assert "fresh.txt" in names

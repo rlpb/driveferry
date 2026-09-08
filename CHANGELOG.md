@@ -6,6 +6,54 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-09-08
+
+Browsing a Drive was slow, and the reason turned out to be measurable: with
+`rcd` running and rclone's own debug log on, the first listing of a Drive
+account took 35 seconds, and the log said why.
+
+```
+403: Quota exceeded for quota metric 'Queries' ... for consumer 'project_number:202264815644'
+pacer: Rate limited, increasing sleep to 16.886214748s
+```
+
+That project number is rclone's shared Google client, used by every rclone
+installation in the world. Nothing in this app can make a throttled request
+faster, so the app now says so and offers the one thing that fixes it.
+
+### Added
+
+- **Listings are cached for 90 seconds**, so walking back up a tree is
+  instant instead of a round trip to Google every time. Measured against a
+  real account: 1203 ms cold, 2 ms cached, 375 ms on a forced refresh. Writing
+  to a drive drops its cached listings, and the refresh button always asks
+  Google again.
+- **The status bar explains a slow listing.** When a folder takes more than
+  four seconds and the account is still on rclone's shared client, the footer
+  says Google is rate limiting it and offers a button straight to the client
+  ID walkthrough.
+- **The confirmation sheet says what is about to be replaced**, counted from
+  the destination listing already on screen, so it costs no extra request.
+
+### Changed
+
+- Free space is asked for when the account changes or after a write, not on
+  every folder opened. That was a second round trip per navigation that always
+  answered the same thing.
+- The loading skeleton waits 150 ms before appearing, so a cached folder opens
+  without a flash.
+- A listing that arrives after the user has already moved on is discarded
+  rather than drawn over the newer one.
+
+### Documentation
+
+- The FAQ answers what happens when you copy something that is already there:
+  it is replaced, no prompt, no second copy beside the first, and identical
+  files are skipped, which is why an interrupted transfer can just be started
+  again.
+- The transfer description matched the pre-0.6.0 engine and now matches the
+  one that ships.
+
 ## [0.6.0] - 2026-09-07
 
 The transfer engine was rebuilt after watching a 4 GB job on two real Google
@@ -165,7 +213,8 @@ First public release.
 - Account secrets never leave the Python process; the UI only receives a remote
   name and its backend type.
 
-[Unreleased]: https://github.com/rlpb/driveferry/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/rlpb/driveferry/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/rlpb/driveferry/releases/tag/v0.7.0
 [0.6.0]: https://github.com/rlpb/driveferry/releases/tag/v0.6.0
 [0.5.0]: https://github.com/rlpb/driveferry/releases/tag/v0.5.0
 [0.4.1]: https://github.com/rlpb/driveferry/releases/tag/v0.4.1

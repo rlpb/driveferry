@@ -80,6 +80,8 @@ window.DF_LOCALES = {
     "account.clientSecret": "Client secret",
     "account.clientSteps": "1. Open the rclone guide below. 2. Create a Google Cloud project. 3. Enable the Google Drive API. 4. Create an OAuth client of type Desktop. 5. Paste the two values here.",
     "account.clientGuide": "rclone.org/drive/#making-your-own-client-id",
+    "status.throttled": "Google is rate limiting rclone's shared client, which is why this is slow. Your own client ID is free, takes about ten minutes, and gives you a quota nobody else shares.",
+    "status.fixIt": "Fix this",
     "client.title": "Google client ID",
     "client.notSet": "Using rclone's shared client",
     "client.setUp": "Set up",
@@ -125,6 +127,7 @@ window.DF_LOCALES = {
     "field.folderName": "Folder name",
 
     "notice.dryRun": "Dry run: rclone reports what it would transfer and writes nothing.",
+    "notice.overwrite": "Already at the destination: {n} of {total}. Copying replaces what is there. Identical files are skipped, so nothing is uploaded twice and no second copy appears beside the first.",
     "notice.moveSteps": "Move happens in three steps: copy, verify every file arrived, and only then delete the originals. The delete step needs a separate confirmation.",
     "notice.serverSide": "Server-side copy is requested: Google moves the data directly and nothing passes through this computer. It only works when the destination account can already read the source, so between two unrelated Google accounts it fails instead of falling back.",
     "notice.checking": "Checking that every file arrived…",
@@ -242,6 +245,8 @@ window.DF_LOCALES = {
     "account.clientSecret": "Client secret",
     "account.clientSteps": "1. Apri la guida rclone qui sotto. 2. Crea un progetto Google Cloud. 3. Attiva l'API Google Drive. 4. Crea un client OAuth di tipo Desktop. 5. Incolla qui i due valori.",
     "account.clientGuide": "rclone.org/drive/#making-your-own-client-id",
+    "status.throttled": "Google sta limitando il client condiviso di rclone, ed è per questo che va piano. Un ID client tuo è gratis, richiede una decina di minuti e ti dà una quota che non condividi con nessuno.",
+    "status.fixIt": "Risolvi",
     "client.title": "Client ID Google",
     "client.notSet": "Usa il client condiviso di rclone",
     "client.setUp": "Configurato",
@@ -287,6 +292,7 @@ window.DF_LOCALES = {
     "field.folderName": "Nome della cartella",
 
     "notice.dryRun": "Simulazione: rclone dice cosa trasferirebbe e non scrive niente.",
+    "notice.overwrite": "Già a destinazione: {n} su {total}. La copia sostituisce quello che c'è. I file identici vengono saltati, quindi niente viene caricato due volte e non nasce una seconda copia accanto alla prima.",
     "notice.moveSteps": "Lo spostamento avviene in tre passi: copia, verifica che ogni file sia arrivato e solo dopo cancella gli originali. La cancellazione richiede una conferma separata.",
     "notice.serverSide": "Copia lato server richiesta: Google sposta i dati direttamente e niente passa da questo computer. Funziona solo se l'account di destinazione può già leggere l'origine, quindi fra due account Google scollegati fallisce invece di ripiegare.",
     "notice.checking": "Controllo che ogni file sia arrivato…",

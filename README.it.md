@@ -158,11 +158,13 @@ flowchart LR
     H --> I["Originali cancellati<br/>cestino di Drive, recuperabili"]
 ```
 
-Sotto il cofano DriveFerry avvia un job rclone per ogni elemento selezionato,
-sotto un gruppo di statistiche condiviso: `sync/copy` per una cartella,
-`operations/copyfile` per un singolo file. L'avanzamento arriva da
-`core/stats`, l'esito di ogni job da `job/status`, la verifica da
-`operations/size` sui due lati.
+Sotto il cofano DriveFerry misura tutto il lavoro in background mentre il primo
+elemento si sta già muovendo, poi trasferisce un elemento alla volta:
+`sync/copy` per una cartella, `operations/copyfile` per un singolo file, tutto
+sotto un unico gruppo di statistiche. Un job alla volta è ciò che tiene fermo
+il totale della barra e lascia a Google un solo flusso da rallentare invece di
+venti. L'avanzamento arriva da `core/stats`, l'esito di ogni job da
+`job/status`, la verifica da `operations/size` sui due lati.
 
 ## Sicurezza dei dati
 
@@ -219,6 +221,21 @@ che rende possibile la copia lato server.
 - Non è un prodotto di backup: sposta quello che selezioni, quando lo chiedi.
 
 ## Domande frequenti
+
+**Cosa succede se copio qualcosa che c'è già?**
+Viene sostituito, senza chiedere niente e senza che nasca una seconda copia
+accanto alla prima. I file identici sui due lati vengono saltati invece di
+essere caricati di nuovo: per questo un trasferimento interrotto si può
+semplicemente far ripartire, riprende da dove si era fermato invece di
+ricominciare da zero. Il riepilogo prima della copia dice quanti degli elementi
+selezionati sono già a destinazione.
+
+**Perché navigare in un Drive è lento?**
+Ogni cartella aperta per la prima volta è un giro di andata e ritorno fino a
+Google, e non c'è modo di evitarlo. DriveFerry tiene ogni elenco per 90
+secondi, quindi tornare indietro nell'albero è istantaneo, e butta via l'elenco
+di un drive appena ci scrive sopra. Il tasto aggiorna richiede sempre l'elenco
+a Google.
 
 **Che fine fanno Documenti, Fogli e Presentazioni Google?**
 Non sono file veri dentro Drive, quindi non si possono copiare byte per byte.

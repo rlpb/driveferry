@@ -14,8 +14,26 @@ def make_api(**responses):
 def test_remotes_never_expose_tokens():
     api, _ = make_api()
     remotes = api.remotes()
-    assert remotes == [{"name": "alpha", "type": "drive"}, {"name": "beta", "type": "drive"}]
+    assert [entry["name"] for entry in remotes] == ["alpha", "beta"]
+    assert {entry["type"] for entry in remotes} == {"drive"}
     assert "SECRET" not in repr(remotes)
+
+
+def test_an_account_without_a_client_id_is_reported_as_sharing_rclones():
+    """Google rate limits that client across every rclone user, so the app has
+    to be able to say why a folder took half a minute to open."""
+    api, _ = make_api()
+    assert api.op_state({})["shared_client"] is True
+    assert all(entry["own_client"] is False for entry in api.remotes())
+
+
+def test_an_account_with_its_own_client_id_is_not_flagged():
+    dump = {
+        "alpha": {"type": "drive", "client_id": "mine.apps.googleusercontent.com"},
+        "beta": {"type": "drive", "client_id": "mine.apps.googleusercontent.com"},
+    }
+    api, _ = make_api(**{"config/dump": dump})
+    assert api.op_state({})["shared_client"] is False
 
 
 def test_unknown_remote_is_rejected():
@@ -223,3 +241,79 @@ def test_a_corrupt_settings_file_falls_back_to_defaults(tmp_path):
     path.write_text("{not json", encoding="utf-8")
     prefs = Api(FakeDaemon(), prefs_path=path).prefs
     assert prefs["theme"] == "system" and prefs["locale"] == "system"
+
+
+def listings(daemon):
+    return [call for call in daemon.calls if call[0] == "operations/list"]
+
+
+def test_a_folder_opened_twice_is_only_asked_for_once():
+    api, daemon = make_api(**{"operations/list": {"list": []}})
+    api.op_list({"remote": "alpha", "path": "Photos"})
+    second = api.op_list({"remote": "alpha", "path": "Photos"})
+    assert len(listings(daemon)) == 1
+    assert second["cached"] is True
+
+
+def test_the_refresh_button_bypasses_the_cache():
+    api, daemon = make_api(**{"operations/list": {"list": []}})
+    api.op_list({"remote": "alpha", "path": ""})
+    api.op_list({"remote": "alpha", "path": "", "refresh": True})
+    assert len(listings(daemon)) == 2
+
+
+def test_the_cache_is_per_folder_and_per_remote():
+    api, daemon = make_api(**{"operations/list": {"list": []}})
+    api.op_list({"remote": "alpha", "path": "Photos"})
+    api.op_list({"remote": "alpha", "path": "Docs"})
+    api.op_list({"remote": "beta", "path": "Photos"})
+    assert len(listings(daemon)) == 3
+
+
+def test_a_new_folder_shows_up_without_waiting_for_the_cache():
+    api, daemon = make_api(**{"operations/list": {"list": []}})
+    api.op_list({"remote": "alpha", "path": ""})
+    api.op_mkdir({"remote": "alpha", "path": "", "name": "New Folder"})
+    api.op_list({"remote": "alpha", "path": ""})
+    assert len(listings(daemon)) == 2
+
+
+def test_deleting_drops_the_cached_listing():
+    api, daemon = make_api(**{"operations/list": {"list": []}})
+    api.op_list({"remote": "alpha", "path": ""})
+    api.op_delete({"remote": "alpha", "path": "", "names": ["a.txt"], "dirs": [], "confirm": "DELETE"})
+    api.op_list({"remote": "alpha", "path": ""})
+    assert len(listings(daemon)) == 2
+
+
+def test_a_finished_transfer_drops_the_destination_listing():
+    """Otherwise the folder you just filled still looks empty."""
+    api, daemon = make_api(
+        **{"operations/list": {"list": []}, "job/status": {"finished": True, "success": True}}
+    )
+    api.op_list({"remote": "beta", "path": ""})
+    api.op_transfer(
+        {
+            "src_remote": "alpha",
+            "src_path": "",
+            "dst_remote": "beta",
+            "dst_path": "",
+            "names": ["Photos"],
+            "dirs": ["Photos"],
+        }
+    )
+    api.transfer._thread.join(timeout=10)
+    api.op_transfer_status({})
+    api.op_list({"remote": "beta", "path": ""})
+    assert len(listings(daemon)) >= 2
+
+
+def test_a_running_transfer_keeps_the_cache():
+    """Dropping it on every poll would defeat the point of having one."""
+    api, daemon = make_api(**{"operations/list": {"list": []}})
+    api.op_list({"remote": "beta", "path": ""})
+    api._transfer_target = "beta"
+    api.transfer._state["stage"] = "copying"
+    api.op_transfer_status({})
+    api.op_list({"remote": "beta", "path": ""})
+    assert len(listings(daemon)) == 1

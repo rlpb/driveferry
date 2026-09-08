@@ -21,6 +21,7 @@ import re
 import secrets
 import sys
 import threading
+import time
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -106,6 +107,12 @@ DEFAULT_PREFS = {"theme": "system", "locale": "system", "google_client_id": "", 
 #: secret only ever travels towards rclone.
 PRIVATE_PREFS = ("google_client_secret",)
 
+#: Every folder opened costs a round trip to Google, which is slow enough to
+#: feel like the app is thinking. Listings are held for this long so walking
+#: back up a tree is instant. Anything that writes to a remote drops its
+#: entries, and the refresh button asks for a fresh listing outright.
+LIST_CACHE_SECONDS = 90
+
 
 class Api:
     """The operations the UI is allowed to ask for, and nothing else."""
@@ -114,6 +121,8 @@ class Api:
         self.daemon = daemon
         self.prefs_path = Path(prefs_path) if prefs_path else None
         self._remotes_cache = None
+        self._list_cache = {}
+        self._transfer_target = None
         self.prefs = self._load_prefs()
         self.setup = AccountSetup(daemon)
         self.transfer = TransferRun(daemon)
@@ -169,9 +178,22 @@ class Api:
             names = self.daemon.call("config/listremotes").get("remotes") or []
             dump = self.daemon.call("config/dump")
             self._remotes_cache = [
-                {"name": name, "type": (dump.get(name) or {}).get("type", "unknown")} for name in names
+                {
+                    "name": name,
+                    "type": (dump.get(name) or {}).get("type", "unknown"),
+                    # No client_id means rclone's shared Google client, which is
+                    # rate limited across every rclone user in the world.
+                    "own_client": bool((dump.get(name) or {}).get("client_id")),
+                }
+                for name in names
             ]
         return self._remotes_cache
+
+    def _forget(self, remote):
+        """Drop every cached listing for one remote after writing to it."""
+        prefix = "{}:".format(remote)
+        for key in [key for key in self._list_cache if key.startswith(prefix)]:
+            del self._list_cache[key]
 
     def _fs(self, remote, path):
         """Build an rclone ``remote:path`` string from validated pieces.
@@ -217,10 +239,16 @@ class Api:
             "rclone_binary": self.daemon.binary,
             "remotes": self.remotes(refresh=True),
             "google_client_id": self.prefs.get("google_client_id", ""),
+            "shared_client": any(not entry["own_client"] for entry in self.remotes()),
         }
 
     def op_list(self, payload):
         fs = self._fs(payload.get("remote"), payload.get("path"))
+        path = _clean_path(payload.get("path"))
+        if not payload.get("refresh"):
+            cached = self._list_cache.get(fs)
+            if cached and cached[0] > time.monotonic():
+                return {"entries": cached[1], "path": path, "cached": True}
         listing = self.daemon.call("operations/list", {"fs": fs, "remote": ""})
         entries = []
         for item in listing.get("list") or []:
@@ -234,7 +262,8 @@ class Api:
                 }
             )
         entries.sort(key=lambda e: (not e["is_dir"], e["name"].lower()))
-        return {"entries": entries, "path": _clean_path(payload.get("path"))}
+        self._list_cache[fs] = (time.monotonic() + LIST_CACHE_SECONDS, entries)
+        return {"entries": entries, "path": path, "cached": False}
 
     def op_about(self, payload):
         try:
@@ -258,6 +287,7 @@ class Api:
             "operations/mkdir",
             {"fs": self._fs(payload.get("remote"), ""), "remote": _join(base, name.strip())},
         )
+        self._forget(payload.get("remote"))
         return {"ok": True}
 
     def op_transfer(self, payload):
@@ -274,12 +304,20 @@ class Api:
             "options": self._transfer_config(payload),
         }
         try:
-            return self.transfer.start(plan)
+            started = self.transfer.start(plan)
         except ValueError as exc:
             raise ApiError(str(exc)) from exc
+        self._transfer_target = payload.get("dst_remote")
+        return started
 
     def op_transfer_status(self, payload):
-        return self.transfer.status()
+        status = self.transfer.status()
+        # The destination changed under the cache. Drop it the moment the run
+        # settles, so opening the folder shows what actually arrived.
+        if self._transfer_target and status["stage"] in ("done", "failed", "cancelled"):
+            self._forget(self._transfer_target)
+            self._transfer_target = None
+        return status
 
     def op_transfer_cancel(self, payload):
         return self.transfer.cancel()
@@ -345,6 +383,8 @@ class Api:
                 deleted.append(name)
             except RcloneError as exc:
                 failed.append({"name": name, "error": str(exc)})
+        if deleted:
+            self._forget(remote)
         return {"deleted": deleted, "failed": failed}
 
     # -- connecting an account --------------------------------------------

@@ -666,6 +666,19 @@ body.is-web .tb-controls, body.is-web .tb-lights { display: none; }
 .status-dot.is-ok { background: var(--green); }
 .status-dot.is-busy { background: var(--orange); animation: pulse 1.3s var(--ease-out) infinite; }
 .status-dot.is-error { background: var(--red); }
+.status-dot.is-warn { background: var(--orange); }
+.status-action {
+  margin-left: auto;
+  border: 0;
+  border-radius: 999px;
+  padding: 3px 10px;
+  font: inherit;
+  font-weight: 590;
+  color: var(--tint);
+  background: var(--fill-2);
+  cursor: pointer;
+}
+.status-action:hover { background: var(--fill-1); }
 @keyframes pulse { 50% { opacity: 0.25; } }
 
 /* ============================================================

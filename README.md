@@ -158,10 +158,13 @@ flowchart LR
     H --> I["Originals deleted<br/>Drive trash, recoverable"]
 ```
 
-Underneath, DriveFerry starts one rclone job per selected item, under a shared
-statistics group: `sync/copy` for a folder, `operations/copyfile` for a single
-file. Progress is read from `core/stats`, per-job outcome from `job/status`, and
-verification from `operations/size` on both sides.
+Underneath, DriveFerry sizes the whole job in the background while the first
+item is already moving, then transfers the items one at a time: `sync/copy` for
+a folder, `operations/copyfile` for a single file, all under one statistics
+group. One job at a time is what keeps the progress total from moving and gives
+Google one upload stream to throttle instead of twenty. Progress is read from
+`core/stats`, per-job outcome from `job/status`, and verification from
+`operations/size` on both sides.
 
 ## Safety
 
@@ -221,6 +224,19 @@ They are not real files in Drive, so they cannot be copied byte for byte.
 rclone exports them, by default to Microsoft Office formats, and the copy is a
 regular file. If you need them to stay native Google documents, use Drive's own
 sharing and ownership transfer for those, and DriveFerry for everything else.
+
+**What happens if I copy something that is already there?**
+It is replaced, without a prompt and without a second copy appearing beside the
+first. Files that are identical on both sides are skipped rather than uploaded
+again, which is also why an interrupted transfer can simply be started again:
+it picks up where it stopped instead of restarting from zero. The confirmation
+sheet tells you how many of the selected items already exist at the destination.
+
+**Why is browsing a Drive slow?**
+Every folder you open for the first time is one round trip to Google, and there
+is no way around that. DriveFerry keeps each listing for 90 seconds, so walking
+back up a tree is instant, and drops the cached listing for a drive as soon as
+it writes to it. The refresh button always asks Google again.
 
 **Do shortcuts survive?**
 No. A Drive shortcut is a pointer, and it is not meaningful in another account.

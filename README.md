@@ -12,6 +12,7 @@ A native desktop app on top of rclone, for the one thing Google Drive still cann
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-black.svg)](LICENSE)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue.svg)](pyproject.toml)
 [![Platforms](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)](#download)
+[![Ko-fi](https://img.shields.io/badge/Ko--fi-support-FF5E5B?logo=kofi&logoColor=white)](https://ko-fi.com/rlpb_)
 
 [Download](#download) · [How it works](#how-a-transfer-works) · [Safety](#safety) · [FAQ](#faq) · [Italiano](README.it.md)
 
@@ -80,7 +81,15 @@ Grab the build for your system from the
 | Windows 10/11 | `DriveFerry-windows-x64.exe` | Uses the WebView2 runtime, already present on Windows 11 |
 | macOS, Apple Silicon | `DriveFerry-macos-arm64.zip` | Unsigned: first launch is right-click then **Open** |
 | Linux x64 | `DriveFerry-linux-x64` | Needs `gir1.2-webkit2-4.0` and `python3-gi` installed |
-| Intel Mac | run from source | GitHub retired its Intel build runners; the source install below works |
+| macOS, Intel | `DriveFerry-macos-x64.zip` | Unsigned: first launch is right-click then **Open** |
+
+Every release carries a `SHA256SUMS.txt` produced by the same workflow that
+built the binaries, so you can confirm the file you downloaded is the file CI
+made:
+
+```bash
+sha256sum -c SHA256SUMS.txt --ignore-missing
+```
 
 DriveFerry needs rclone on the machine. If it is missing, the app says so and
 gives you the command:
@@ -314,6 +323,10 @@ does, and it is the project to support first.
 If this tool saved you an afternoon and you want to say thanks anyway, there is
 a [Ko-fi](https://ko-fi.com/rlpb_). Nothing here is paywalled, and nothing ever
 will be.
+
+<div align="center">
+<a href="https://ko-fi.com/rlpb_"><img src="https://ko-fi.com/img/githubbutton_sm.svg" alt="Support this project on Ko-fi" height="36"></a>
+</div>
 
 ## Credits
 

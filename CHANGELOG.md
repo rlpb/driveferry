@@ -6,6 +6,23 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-09-09
+
+### Added
+
+- **A macOS Intel build is back.** The Intel runner GitHub retired has a
+  replacement label, so an Apple Silicon binary is no longer the only macOS
+  option and Intel Macs stop being told to build from source.
+- **SHA-256 checksums with every release.** `SHA256SUMS.txt` is produced by the
+  workflow that built the binaries, so anyone downloading one can confirm they
+  got the file CI made rather than whatever a mirror handed them.
+- A Ko-fi badge in the header and the Ko-fi button above the credits, matching
+  the other repositories.
+
+### Fixed
+
+- The Italian README was missing the platforms badge the English one carries.
+
 ## [0.7.0] - 2026-09-08
 
 Browsing a Drive was slow, and the reason turned out to be measurable: with

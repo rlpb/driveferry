@@ -11,6 +11,8 @@ Un'app desktop nativa costruita su rclone, per l'unica cosa che Google Drive anc
 [![Ultima release](https://img.shields.io/github/v/release/rlpb/driveferry?display_name=tag&sort=semver)](https://github.com/rlpb/driveferry/releases/latest)
 [![Licenza: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-black.svg)](LICENSE)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue.svg)](pyproject.toml)
+[![Piattaforme](https://img.shields.io/badge/piattaforme-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)](#scarica)
+[![Ko-fi](https://img.shields.io/badge/Ko--fi-sostieni-FF5E5B?logo=kofi&logoColor=white)](https://ko-fi.com/rlpb_)
 
 [Scarica](#scarica) · [Come funziona](#come-funziona-un-trasferimento) · [Sicurezza](#sicurezza-dei-dati) · [Domande](#domande-frequenti) · [English](README.md)
 
@@ -80,7 +82,15 @@ Prendi il file per il tuo sistema dalla
 | Windows 10/11 | `DriveFerry-windows-x64.exe` | Usa il runtime WebView2, già presente su Windows 11 |
 | macOS, Apple Silicon | `DriveFerry-macos-arm64.zip` | Non firmata: al primo avvio tasto destro e **Apri** |
 | Linux x64 | `DriveFerry-linux-x64` | Richiede `gir1.2-webkit2-4.0` e `python3-gi` |
-| Mac Intel | dal sorgente | GitHub ha dismesso i runner Intel; l'installazione dal sorgente qui sotto funziona |
+| macOS, Intel | `DriveFerry-macos-x64.zip` | Non firmata: al primo avvio tasto destro e **Apri** |
+
+Ogni release porta un `SHA256SUMS.txt` prodotto dallo stesso workflow che ha
+costruito i binari, così puoi verificare che il file scaricato sia quello che la
+CI ha creato:
+
+```bash
+sha256sum -c SHA256SUMS.txt --ignore-missing
+```
 
 Serve rclone sulla macchina. Se manca, l'app te lo dice e ti dà il comando:
 
@@ -315,6 +325,10 @@ ed è quello il progetto da sostenere per primo.
 Se questo strumento ti ha risparmiato un pomeriggio e vuoi dire grazie lo
 stesso, c'è un [Ko-fi](https://ko-fi.com/rlpb_). Qui niente è a pagamento, e
 niente lo sarà mai.
+
+<div align="center">
+<a href="https://ko-fi.com/rlpb_"><img src="https://ko-fi.com/img/githubbutton_sm.svg" alt="Sostieni questo progetto su Ko-fi" height="36"></a>
+</div>
 
 ## Crediti
 

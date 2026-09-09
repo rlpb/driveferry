@@ -40,6 +40,7 @@ jobs:
         include:
           - { os: windows-latest, label: Windows x64, asset: DriveFerry-windows-x64.exe }
           - { os: macos-latest, label: macOS Apple Silicon, asset: DriveFerry-macos-arm64.zip }
+          - { os: macos-15-intel, label: macOS Intel, asset: DriveFerry-macos-x64.zip }
           - { os: ubuntu-22.04, label: Linux x64, asset: DriveFerry-linux-x64 }
     steps:
       - uses: actions/checkout@v7
@@ -109,6 +110,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+
+      # Published alongside the installers so anyone downloading one can check
+      # they got the file this workflow produced, and not something a mirror or
+      # a hijacked link handed them instead.
+      - name: Checksums
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p sums && cd sums
+          gh release download "$TAG" --pattern "DriveFerry-*" --clobber
+          sha256sum DriveFerry-* | sort -k2 > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+          gh release upload "$TAG" SHA256SUMS.txt --clobber
+
       - name: Publish the release
         env:
           GH_TOKEN: ${{ github.token }}

@@ -29,10 +29,14 @@ jobs:
       # installed first on purpose: auditing the environment without it would
       # audit ruff and pip-audit and report a clean result about the wrong
       # thing.
+      # --skip-editable leaves out driveferry itself, which is installed from
+      # this checkout and has no PyPI entry to audit; without it --strict reads
+      # "could not be audited" as a failure and the step never reaches a verdict
+      # on the dependencies, which is the whole point of running it.
       - name: Audit the dependencies
         run: |
           pip install -e .
-          pip-audit --strict --desc
+          pip-audit --strict --desc --skip-editable
 
   test:
     name: ${{ matrix.os }} / Python ${{ matrix.python }}

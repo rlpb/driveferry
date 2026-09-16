@@ -16,18 +16,62 @@ env:
   TAG: ${{ github.event.inputs.tag || github.ref_name }}
 
 jobs:
+  # The same scans the push workflow runs, on the commit about to be published.
+  # A gate that publishes has to clear the bar the gate that does not already
+  # clears, or the bar is decorative.
+  guards:
+    uses: ./.github/workflows/guards.yml
+    with:
+      ref: ${{ github.event.inputs.tag || github.ref_name }}
+      language-excludes: "--exclude=i18n.js"
+
   draft:
+    needs: guards
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
         with:
+          ref: ${{ github.event.inputs.tag || github.ref_name }}
           fetch-depth: 0
+
+      # Installers named after one version and downloaded from another is the
+      # kind of mistake nobody catches until somebody reports a bug against a
+      # build that does not exist.
+      - name: The tag, the manifest and the changelog must agree
+        shell: bash
+        run: |
+          version="${TAG#v}"
+          declared=$(grep -m1 '^version *= *"' pyproject.toml | cut -d'"' -f2)
+          echo "tag $version, pyproject $declared"
+          if [ "$version" != "$declared" ]; then
+            echo "::error::the tag says $version and pyproject.toml says $declared"
+            exit 1
+          fi
+          if ! grep -q "^## \[$version\]" CHANGELOG.md; then
+            echo "::error::CHANGELOG.md has no section for $version"
+            exit 1
+          fi
+
       - name: Create or reuse the draft release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          version="${TAG#v}"
+          # Written notes, not generated ones. A list of commit subjects tells a
+          # reader what was typed, never what changed for them.
+          body=$(awk -v v="$version" '
+            $0 ~ "^## \\[" v "\\]" { found = 1; next }
+            found && /^## \[/ { exit }
+            found { print }
+          ' CHANGELOG.md)
+          if [ -z "$(echo "$body" | tr -d '[:space:]')" ]; then
+            echo "::error::CHANGELOG.md has a heading for $version but nothing under it"
+            exit 1
+          fi
           if ! gh release view "$TAG" >/dev/null 2>&1; then
-            gh release create "$TAG" --draft --title "DriveFerry $TAG" --generate-notes
+            gh release create "$TAG" --draft --title "DriveFerry $TAG" --notes "$body"
+          else
+            gh release edit "$TAG" --notes "$body"
           fi
 
   build:

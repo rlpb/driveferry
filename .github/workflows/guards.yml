@@ -1,0 +1,165 @@
+# The checks that are the same in every repository.
+#
+# One callable workflow, byte-identical across rlpb/zitsu, rlpb/driveferry and
+# rlpb/kaleido-studio, so improving one of these checks is a single edit copied
+# three times rather than six edits that drift apart. Both ci.yml and
+# release.yml call it: the run that publishes clears the same bar as the run
+# that does not, or the bar is decorative.
+#
+# Every scan here answers a question whose safe-looking answer is silence. A
+# broken pattern, a bad pathspec, an intercepted binary and a clean repository
+# all print nothing. So each scan is proved against a known positive before its
+# silence is believed, and reads exit status rather than truthiness: 0 is a
+# match, 1 is no match, anything else is the tool failing to answer.
+
+name: Guards
+
+on:
+  workflow_call:
+    inputs:
+      ref:
+        description: Commit or tag to check. Empty means whatever the caller is on.
+        required: false
+        type: string
+        default: ""
+      language-excludes:
+        description: >
+          Extra grep arguments for files allowed to hold non-English text, space
+          separated, for example "--exclude=i18n.js --exclude-dir=vendor".
+          README.it.md and this file are always excluded.
+        required: false
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  guards:
+    name: No keys, no personal paths, English only
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref }}
+          # The history keeps what the working tree no longer has, which is the
+          # whole reason for scanning it.
+          fetch-depth: 0
+
+      - name: Nothing that looks like a credential, in the tree or the history
+        shell: bash
+        run: |
+          pattern='sk-[A-Za-z0-9]{20,}|ghp_[A-Za-z0-9]{20,}|AKIA[0-9A-Z]{16}|-----BEGIN [A-Z ]*PRIVATE KEY'
+
+          # Built in two pieces on purpose. Written whole, the fixture is a
+          # string this very scan exists to catch, so a committed copy turns the
+          # check red for good. That is how this was first learned.
+          printf 'AKIA%s' 'ABCDEFGHIJKLMNOP' > .credential-positive-control
+          proved=0
+          git grep --no-index -InE "$pattern" -- .credential-positive-control > /dev/null || proved=$?
+          rm -f .credential-positive-control
+          if [ "$proved" -ne 0 ]; then
+            echo "::error::the credential scan is broken: it did not match a known key"
+            exit 1
+          fi
+          echo "positive control matched"
+
+          rc=0
+          git grep -InE "$pattern" -- . || rc=$?
+          if [ "$rc" -eq 0 ]; then
+            echo "::error::something that looks like a credential is in the working tree"
+            exit 1
+          fi
+          if [ "$rc" -ne 1 ]; then
+            echo "::error::git grep failed with status $rc, so it did not answer the question"
+            exit 1
+          fi
+
+          # A line in the history is excused only when it names the control it
+          # belongs to, which no real leak does. One grep wide, rather than a
+          # path the scan stops looking at.
+          rc=0
+          git log --all -p | grep -InE "$pattern" | grep -v 'positive-control' || rc=$?
+          if [ "$rc" -eq 0 ]; then
+            echo "::error::something that looks like a credential is in the history"
+            exit 1
+          fi
+          echo "clean"
+
+      - name: No absolute path with somebody's name in it
+        shell: bash
+        run: |
+          paths='C:[\\/]+Users[\\/]+[A-Za-z0-9_.-]+|/home/[a-z0-9_-]+/|/Users/[A-Za-z0-9_.-]+/'
+
+          # Split for the same reason as the credential fixture above, and this
+          # one was learned twice: written whole, the line is a personal path,
+          # and the scan below caught its own control the moment this file was
+          # committed. A scanner's fixture is by definition what the scanner
+          # forbids.
+          printf '/%s/someone/project\n' 'home' > .path-positive-control
+          proved=0
+          git grep --no-index -InE "$paths" -- .path-positive-control > /dev/null || proved=$?
+          rm -f .path-positive-control
+          if [ "$proved" -ne 0 ]; then
+            echo "::error::the path scan is broken: it did not match a known personal path"
+            exit 1
+          fi
+          echo "positive control matched"
+
+          # Markdown is included on purpose: prose is where a path gets typed
+          # out by hand. .gitignore is excluded because naming a local directory
+          # is what that file is for.
+          rc=0
+          git grep -InE "$paths" -- . ':(exclude).gitignore' || rc=$?
+          if [ "$rc" -eq 0 ]; then
+            echo "::error::an absolute path with a username is committed"
+            exit 1
+          fi
+          if [ "$rc" -ne 1 ]; then
+            echo "::error::git grep failed with status $rc, so it did not answer the question"
+            exit 1
+          fi
+          echo "clean"
+
+      - name: Everything in the repository is in English
+        shell: bash
+        env:
+          EXTRA: ${{ inputs.language-excludes }}
+        run: |
+          # LC_ALL=C.UTF-8 is not optional. Without it the accent class is
+          # compared byte by byte and matches the bytes inside the ellipsis, the
+          # multiplication sign, the em dash and the copyright sign, filling the
+          # output with false positives until the check is filed as noise and
+          # stops being read.
+          words='[àèéìòùÀÈÉÌÒÙ]|\b(che|della|delle|degli|sono|viene|quando|questo|questa|perché|però)\b'
+
+          printf 'Questa riga contiene perch\xc3\xa9 e la parola che.\n' > /tmp/language-positive-control.md
+          if ! LC_ALL=C.UTF-8 grep -qInE "$words" /tmp/language-positive-control.md; then
+            echo "::error::the language scan is broken: it did not match a known positive"
+            exit 1
+          fi
+          echo "positive control matched"
+
+          # per, non, con, di, la, il and una are deliberately absent: Italian,
+          # but they also turn up in English technical prose (per-token,
+          # non-numeric, con inside config), and a noisy check gets ignored,
+          # which is worse than no check. The accent class is the strong signal.
+          # This file is excluded because it carries the pattern and the fixture.
+          # shellcheck disable=SC2086
+          rc=0
+          LC_ALL=C.UTF-8 grep -rInE "$words" \
+            --include='*.js' --include='*.mjs' --include='*.ts' --include='*.tsx' \
+            --include='*.py' --include='*.md' --include='*.yml' --include='*.yaml' \
+            --include='*.html' --include='*.css' --include='*.svg' \
+            --exclude='README.it.md' --exclude='guards.yml' $EXTRA \
+            --exclude-dir=node_modules --exclude-dir=dist --exclude-dir=dist-electron \
+            --exclude-dir=release --exclude-dir=.git . || rc=$?
+          if [ "$rc" -eq 0 ]; then
+            echo "::error::non-English text outside the files allowed to have it"
+            exit 1
+          fi
+          if [ "$rc" -ne 1 ]; then
+            echo "::error::grep failed with status $rc, so it did not answer the question"
+            exit 1
+          fi
+          echo "clean"

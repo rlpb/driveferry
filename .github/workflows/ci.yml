@@ -21,9 +21,18 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
-      - run: pip install ruff
+      - run: pip install ruff pip-audit
       - run: ruff check .
       - run: ruff format --check .
+
+      # Nothing known-vulnerable in what a user ends up running. The project is
+      # installed first on purpose: auditing the environment without it would
+      # audit ruff and pip-audit and report a clean result about the wrong
+      # thing.
+      - name: Audit the dependencies
+        run: |
+          pip install -e .
+          pip-audit --strict --desc
 
   test:
     name: ${{ matrix.os }} / Python ${{ matrix.python }}
@@ -72,3 +81,12 @@ jobs:
             echo "::error::rclone was missing, so the real-transfer tests did not run."
             exit 1
           fi
+
+  # The scans that every repository of mine runs, kept in one callable file so
+  # that improving one of them is a single edit copied across the three rather
+  # than six edits that drift. release.yml calls the same one.
+  guards:
+    uses: ./.github/workflows/guards.yml
+    with:
+      # The interface ships its strings in both languages by design.
+      language-excludes: "--exclude=i18n.js"

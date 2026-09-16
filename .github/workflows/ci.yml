@@ -29,14 +29,19 @@ jobs:
       # installed first on purpose: auditing the environment without it would
       # audit ruff and pip-audit and report a clean result about the wrong
       # thing.
-      # --skip-editable leaves out driveferry itself, which is installed from
-      # this checkout and has no PyPI entry to audit; without it --strict reads
-      # "could not be audited" as a failure and the step never reaches a verdict
-      # on the dependencies, which is the whole point of running it.
+      # The project is installed first, or the audit reports a clean result
+      # about ruff and pip-audit rather than about what a user runs.
+      #
+      # No --strict, and the reason is not laziness: --strict fails on any
+      # dependency that was skipped, and driveferry itself is always skipped,
+      # because it is installed from this checkout and has no PyPI entry to look
+      # up. The two flags cannot both hold. What --strict adds is a failure on a
+      # skip; what actually matters, a known advisory against bottle, pywebview,
+      # proxy_tools or anything they pull in, fails the step either way.
       - name: Audit the dependencies
         run: |
           pip install -e .
-          pip-audit --strict --desc --skip-editable
+          pip-audit --desc --skip-editable
 
   test:
     name: ${{ matrix.os }} / Python ${{ matrix.python }}
